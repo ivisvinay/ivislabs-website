@@ -13,7 +13,7 @@ const ProductShowcase = () => {
       icon: <FiSearch className="text-3xl" />,
       description: 'AI-powered image search for e-commerce product discovery and replacement parts matching',
       features: ['Deep learning algorithms', 'Real-time matching', 'Multi-category support'],
-      demoLink: '/demo/visual-search',
+      demoLink: 'https://recommender.ivislabs.in/',
       image: 'recommender.ivislabs.in'
     },
     {
@@ -22,7 +22,7 @@ const ProductShowcase = () => {
       icon: <FiMonitor className="text-3xl" />,
       description: 'Real-time industrial machine monitoring with predictive maintenance alerts',
       features: ['IoT sensor integration', 'Power consumption analytics', 'Predictive maintenance'],
-      demoLink: '/demo/machine-monitor',
+      demoLink: 'https://machineshop.ivislabs.in/',
       image: 'machineshop.ivislabs.in'
     },
     {
@@ -31,7 +31,7 @@ const ProductShowcase = () => {
       icon: <FiUsers className="text-3xl" />,
       description: 'Smart access control and attendance monitoring with facial recognition',
       features: ['Automated registration', 'Real-time analytics', 'Visitor tracking'],
-      demoLink: '/demo/entry-exit',
+      demoLink: 'https://entry-exit.ivislabs.in/',
       image: 'entry-exit.ivislabs.in'
     },
     {
@@ -40,7 +40,7 @@ const ProductShowcase = () => {
       icon: <FiMessageSquare className="text-3xl" />,
       description: 'Enterprise communication and collaboration platform for teams',
       features: ['Team chat', 'Ticket management', 'Polls & announcements'],
-      demoLink: '/demo/sereno',
+      demoLink: 'https://sereno.ivislabs.in/',
       image: 'Enterprise platform'
     },
     {
@@ -49,7 +49,7 @@ const ProductShowcase = () => {
       icon: <FiShoppingBag className="text-3xl" />,
       description: 'Augmented reality based retail search solution for pharmacies',
       features: ['AR visualization', 'Product location', 'Inventory tracking'],
-      demoLink: '/demo/pharmacy',
+      demoLink: 'https://pharmacy.ivislabs.in/',
       image: 'pharmacy.ivislabs.in'
     }
   ];
