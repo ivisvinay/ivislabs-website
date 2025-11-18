@@ -1,6 +1,14 @@
 import { useState } from "react";
-import { Mail, Phone, MapPin, Send, CheckCircle } from "lucide-react";
-import { companyData } from "../data/companyData";
+import { Mail, Phone, Send, CheckCircle } from "lucide-react";
+
+// Mock company data since it's imported from external file
+const companyData = {
+  contact: {
+    email: "contact@company.com",
+    phone: "+91 63644 11444",
+    address: "Temple Road, Jayalakshmipuram, Mysuru, Karnataka 570012"
+  }
+};
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -20,12 +28,40 @@ const Contact = () => {
     });
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // Handle form submission here
-    console.log("Form submitted:", formData);
+  const handleSubmit = () => {
+    // Validate required fields
+    if (!formData.name || !formData.email || !formData.subject || !formData.message) {
+      alert("Please fill in all required fields (Name, Email, Subject, and Message)");
+      return;
+    }
+    
+    // Format message for WhatsApp
+    const whatsappNumber = "916364411444"; // Remove spaces and special characters
+    const message = `*New Contact Form Submission*%0A%0A*Name:* ${formData.name}%0A*Email:* ${formData.email}%0A*Company:* ${formData.company || "N/A"}%0A*Phone:* ${formData.phone || "N/A"}%0A*Subject:* ${formData.subject}%0A%0A*Message:*%0A${formData.message}`;
+    
+    // Open WhatsApp with pre-filled message
+    const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${message}`;
+    window.open(whatsappUrl, '_blank');
+    
+    // Show success message
     setIsSubmitted(true);
-    setTimeout(() => setIsSubmitted(false), 5000);
+    setTimeout(() => {
+      setIsSubmitted(false);
+      // Reset form
+      setFormData({
+        name: "",
+        email: "",
+        company: "",
+        phone: "",
+        subject: "",
+        message: "",
+      });
+    }, 5000);
+  };
+
+  const handleScheduleDemo = () => {
+    // Initiate phone call
+    window.location.href = "tel:+916364411444";
   };
 
   return (
@@ -50,8 +86,8 @@ const Contact = () => {
       </section>
 
       {/* Contact Section */}
-      <section className="section-padding bg-white">
-        <div className="container-custom">
+      <section className="py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
             {/* Contact Form */}
             <div>
@@ -64,16 +100,15 @@ const Contact = () => {
                   <CheckCircle className="h-6 w-6 text-green-600 mr-3 flex-shrink-0 mt-1" />
                   <div>
                     <h3 className="font-bold text-green-900 mb-2">
-                      Message Sent Successfully!
+                      Redirecting to WhatsApp!
                     </h3>
                     <p className="text-green-700">
-                      Thank you for contacting us. We'll get back to you within
-                      24 hours.
+                      Your message has been prepared. Complete sending it via WhatsApp to connect with us directly.
                     </p>
                   </div>
                 </div>
               ) : (
-                <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -82,10 +117,9 @@ const Contact = () => {
                       <input
                         type="text"
                         name="name"
-                        required
                         value={formData.name}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="Your name"
                       />
                     </div>
@@ -96,10 +130,9 @@ const Contact = () => {
                       <input
                         type="email"
                         name="email"
-                        required
                         value={formData.email}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="your@email.com"
                       />
                     </div>
@@ -115,7 +148,7 @@ const Contact = () => {
                         name="company"
                         value={formData.company}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="Your company"
                       />
                     </div>
@@ -128,7 +161,7 @@ const Contact = () => {
                         name="phone"
                         value={formData.phone}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="+91-XXX-XXX-XXXX"
                       />
                     </div>
@@ -141,10 +174,9 @@ const Contact = () => {
                     <input
                       type="text"
                       name="subject"
-                      required
                       value={formData.subject}
                       onChange={handleChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="How can we help?"
                     />
                   </div>
@@ -155,23 +187,22 @@ const Contact = () => {
                     </label>
                     <textarea
                       name="message"
-                      required
                       value={formData.message}
                       onChange={handleChange}
                       rows={6}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Tell us about your project..."
                     />
                   </div>
 
                   <button
-                    type="submit"
-                    className="w-full btn-primary flex items-center justify-center"
+                    onClick={handleSubmit}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center"
                   >
                     <Send className="mr-2 h-5 w-5" />
-                    Send Message
+                    Send via WhatsApp
                   </button>
-                </form>
+                </div>
               )}
             </div>
 
@@ -183,14 +214,14 @@ const Contact = () => {
 
               <div className="space-y-6 mb-8">
                 <div className="flex items-start">
-                  <div className="bg-primary-100 p-3 rounded-lg mr-4">
-                    <Mail className="h-6 w-6 text-primary-600" />
+                  <div className="bg-blue-100 p-3 rounded-lg mr-4">
+                    <Mail className="h-6 w-6 text-blue-600" />
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-1">Email</h3>
                     <a
                       href={`mailto:${companyData.contact.email}`}
-                      className="text-primary-600 hover:text-primary-700"
+                      className="text-blue-600 hover:text-blue-700"
                     >
                       {companyData.contact.email}
                     </a>
@@ -198,37 +229,49 @@ const Contact = () => {
                 </div>
 
                 <div className="flex items-start">
-                  <div className="bg-primary-100 p-3 rounded-lg mr-4">
-                    <Phone className="h-6 w-6 text-primary-600" />
+                  <div className="bg-blue-100 p-3 rounded-lg mr-4">
+                    <Phone className="h-6 w-6 text-blue-600" />
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-1">Phone</h3>
                     <a
                       href={`tel:${companyData.contact.phone}`}
-                      className="text-primary-600 hover:text-primary-700"
+                      className="text-blue-600 hover:text-blue-700"
                     >
                       {companyData.contact.phone}
                     </a>
                   </div>
                 </div>
+              </div>
 
-                <div className="flex items-start">
-                  <div className="bg-primary-100 p-3 rounded-lg mr-4">
-                    <MapPin className="h-6 w-6 text-primary-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-900 mb-1">
-                      Location
-                    </h3>
-                    <p className="text-gray-600">
-                      {companyData.contact.address}
-                    </p>
-                  </div>
+              {/* Google Maps Card */}
+              <div className="bg-gradient-to-br from-gray-50 to-white p-6 rounded-xl border border-gray-200 mb-8">
+                <h3 className="font-bold text-gray-900 mb-4">Location</h3>
+                <div className="aspect-video rounded-lg overflow-hidden">
+                  <iframe
+                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3898.6567890123456!2d76.6225487!3d12.318221!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3baf7b8e751cfd97%3A0x4ceec21d710bb532!2sIVIS%20LABS%20Pvt%20Ltd!5e0!3m2!1sen!2sin!4v1625123456789!5m2!1sen!2sin"
+                    width="100%"
+                    height="100%"
+                    style={{ border: 0 }}
+                    allowFullScreen
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    title="IVIS LABS Location"
+                    className="rounded-lg"
+                  />
+                </div>
+                <div className="mt-3 text-center">
+                  <p className="text-gray-700 font-medium text-sm">
+                    Temple Road, Jayalakshmipuram
+                  </p>
+                  <p className="text-gray-600 text-xs">
+                    Mysuru, Karnataka 570012
+                  </p>
                 </div>
               </div>
 
               {/* Office Hours */}
-              <div className="bg-gradient-to-br from-gray-50 to-white p-6 rounded-xl border border-gray-200 mb-8">
+              {/* <div className="bg-gradient-to-br from-gray-50 to-white p-6 rounded-xl border border-gray-200 mb-8">
                 <h3 className="font-bold text-gray-900 mb-4">Office Hours</h3>
                 <div className="space-y-2 text-gray-600">
                   <div className="flex justify-between">
@@ -244,46 +287,15 @@ const Contact = () => {
                     <span className="font-medium">Closed</span>
                   </div>
                 </div>
-              </div>
-
-              {/* Quick Links */}
-              <div className="bg-primary-50 p-6 rounded-xl">
-                <h3 className="font-bold text-gray-900 mb-4">Quick Links</h3>
-                <div className="space-y-2">
-                  <a
-                    href="/products"
-                    className="block text-primary-600 hover:text-primary-700 font-medium"
-                  >
-                    → Explore Our Products
-                  </a>
-                  <a
-                    href="/services"
-                    className="block text-primary-600 hover:text-primary-700 font-medium"
-                  >
-                    → View Our Solutions
-                  </a>
-                  <a
-                    href="/case-studies"
-                    className="block text-primary-600 hover:text-primary-700 font-medium"
-                  >
-                    → Read Case Studies
-                  </a>
-                  <a
-                    href="/careers"
-                    className="block text-primary-600 hover:text-primary-700 font-medium"
-                  >
-                    → Join Our Team
-                  </a>
-                </div>
-              </div>
+              </div> */}
             </div>
           </div>
         </div>
       </section>
 
       {/* Map or Additional CTA */}
-      <section className="section-padding bg-gray-50">
-        <div className="container-custom">
+      <section className="py-16 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
             <h2 className="text-3xl font-bold mb-6 text-gray-900">
               Looking for a Demo?
@@ -292,7 +304,13 @@ const Contact = () => {
               Schedule a personalized demo of our AI solutions and see how they
               can benefit your organization
             </p>
-            <button className="btn-primary">Schedule a Demo</button>
+            <button 
+              onClick={handleScheduleDemo}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg transition-colors duration-200 inline-flex items-center"
+            >
+              <Phone className="mr-2 h-5 w-5" />
+              Schedule a Demo
+            </button>
           </div>
         </div>
       </section>
