@@ -9,7 +9,7 @@ const HeroSection = () => {
   const slides = [
     {
       title: "Champions Evolve.",
-      subtitle: "DIGITAL-FIRST | CLOUD-FIRST | AI-FIRST",
+      subtitle: "DIGITAL-FIRST | ON-PREM | AI-FIRST",
       description: "Pioneering Computer Vision and AI solutions that transform businesses",
       bgClass: "from-black via-blue-900 to-black",
       cta: "Explore Solutions",
