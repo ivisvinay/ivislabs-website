@@ -292,9 +292,9 @@ const Home = () => {
               <Link to="/contact" className="btn-primary bg-white text-blue-700 hover:bg-gray-100">
                 Get Started <FiArrowRight className="inline ml-2" />
               </Link>
-              <Link to="/demo/visual-search" className="btn-secondary bg-transparent border-white text-white hover:bg-white hover:text-blue-700">
+              {/* <Link to="/demo/visual-search" className="btn-secondary bg-transparent border-white text-white hover:bg-white hover:text-blue-700">
                 Try Our Demo
-              </Link>
+              </Link> */}
             </div>
           </motion.div>
         </div>

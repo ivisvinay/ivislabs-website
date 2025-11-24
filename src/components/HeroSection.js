@@ -155,10 +155,10 @@ const HeroSection = () => {
                 {slides[currentSlide].cta}
                 <FiArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
               </Link>
-              <button className="px-8 py-4 bg-white/10 backdrop-blur-md text-white rounded-lg font-semibold hover:bg-white/20 transition-all inline-flex items-center border border-white/30">
+              {/* <button className="px-8 py-4 bg-white/10 backdrop-blur-md text-white rounded-lg font-semibold hover:bg-white/20 transition-all inline-flex items-center border border-white/30">
                 <FiPlay className="mr-2" />
                 Watch Demo
-              </button>
+              </button> */}
             </motion.div>
 
             {/* Slide indicators */}
