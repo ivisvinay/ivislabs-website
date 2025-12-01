@@ -4,7 +4,7 @@ import { Mail, Phone, Send, CheckCircle } from "lucide-react";
 // Mock company data since it's imported from external file
 const companyData = {
   contact: {
-    email: "contact@company.com",
+    email: "contact@ivislabs.com",
     phone: "+91 63644 11444",
     address: "Temple Road, Jayalakshmipuram, Mysuru, Karnataka 570012"
   }
