@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FiArrowRight, FiPlay, FiCode, FiEye, FiCpu } from 'react-icons/fi';
+import { FiArrowRight, FiCode, FiEye, FiCpu } from 'react-icons/fi';
 
 const HeroSection = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
