@@ -1,4 +1,6 @@
 {
-  "username": "admin",
-  "password": "iVis2021"
+  "apiKey": "iVis2021",
+  "users": [
+    { "username": "admin", "password": "iVis2021" }
+  ]
 }

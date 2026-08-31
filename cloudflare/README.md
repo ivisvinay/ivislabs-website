@@ -45,12 +45,31 @@ export CLOUDFLARE_API_TOKEN=<token with Workers + R2 edit>
 ./cloudflare/deploy.sh
 ```
 
-## Changing the admin password
+## Admin users
 
-The password lives in **two** places — keep them identical:
+`src/config/adminAuth.json` holds the login gate and the shared Worker key:
 
-1. `src/config/adminAuth.json` (client login gate) — then rebuild/redeploy the site.
-2. `ADMIN_PASS` in `cloudflare/deploy.sh` — then run `./cloudflare/deploy.sh`.
+```json
+{
+  "apiKey": "iVis2021",
+  "users": [
+    { "username": "admin",  "password": "iVis2021" },
+    { "username": "vinay",  "password": "another-pass" }
+  ]
+}
+```
+
+- **Add / remove a user:** edit the `users` array and redeploy the **site**
+  (push to `ivislabs`). No Worker change is needed — every user shares `apiKey`
+  to talk to the Worker, and the document record stores which username issued it.
+- **`apiKey`** must equal the Worker's `ADMIN_PASS` secret (`iVis2021`). Change it
+  in both `adminAuth.json` and `cloudflare/deploy.sh`, then run
+  `./cloudflare/deploy.sh` and redeploy the site.
+- (Optional) For per-user Worker keys instead of one shared key, set an
+  `ADMIN_KEYS` secret (comma-separated) on the Worker; it accepts any of them.
+
+Note: because `adminAuth.json` is bundled into the public site, these passwords
+are technically visible in the site's JavaScript — see the security note below.
 
 ## The seal + signature
 

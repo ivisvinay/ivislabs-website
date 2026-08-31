@@ -62,6 +62,28 @@ const DOC_LABELS = {
   performance: "Performance Award Certificate",
 };
 
+/**
+ * Valid keys accepted as X-Admin-Key. Supports a single ADMIN_PASS and/or a
+ * comma-separated ADMIN_KEYS (for per-user Worker keys, if ever wanted).
+ */
+function validKeys(env) {
+  const keys = [];
+  if (env.ADMIN_KEYS) {
+    for (const k of env.ADMIN_KEYS.split(",")) {
+      const t = k.trim();
+      if (t) keys.push(t);
+    }
+  }
+  if (env.ADMIN_PASS) keys.push(env.ADMIN_PASS);
+  return keys;
+}
+
+function isAuthorized(request, env) {
+  const key = request.headers.get("X-Admin-Key") || "";
+  const keys = validKeys(env);
+  return keys.length > 0 && keys.includes(key);
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -74,12 +96,11 @@ export default {
     try {
       // ---- Issue a new document (admin only) ----
       if (path === "/api/issue" && request.method === "POST") {
-        const key = request.headers.get("X-Admin-Key") || "";
-        if (!env.ADMIN_PASS || key !== env.ADMIN_PASS) {
+        if (!isAuthorized(request, env)) {
           return json({ ok: false, error: "Unauthorized" }, 401, request);
         }
         const body = await request.json();
-        const { id, type, recipient, pdfBase64, meta } = body || {};
+        const { id, type, recipient, pdfBase64, meta, issuer } = body || {};
         if (!id || !type || !recipient || !pdfBase64) {
           return json({ ok: false, error: "Missing fields" }, 400, request);
         }
@@ -104,7 +125,7 @@ export default {
           recipient,
           meta: meta || {},
           issuedAt: new Date().toISOString(),
-          issuer: env.ADMIN_USER || "admin",
+          issuer: (issuer && String(issuer).slice(0, 80)) || env.ADMIN_USER || "admin",
         };
         await env.CERTS.put(`records/${id}.json`, JSON.stringify(record), {
           httpMetadata: { contentType: "application/json" },
@@ -119,8 +140,7 @@ export default {
 
       // ---- List issued documents (admin only) ----
       if (path === "/api/documents" && request.method === "GET") {
-        const key = request.headers.get("X-Admin-Key") || "";
-        if (!env.ADMIN_PASS || key !== env.ADMIN_PASS) {
+        if (!isAuthorized(request, env)) {
           return json({ ok: false, error: "Unauthorized" }, 401, request);
         }
         const list = await env.CERTS.list({ prefix: "records/", limit: 1000 });

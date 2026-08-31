@@ -3,9 +3,26 @@ import adminAuth from "../config/adminAuth.json";
 import { DOC_TYPES, generateDocument } from "../utils/certificatePdf";
 
 const API = process.env.REACT_APP_CERT_API || "";
-const SS_KEY = "ivis_admin_key";
+const SS_KEY = "ivis_admin_user";
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
+
+// Support both the multi-user shape ({ apiKey, users: [...] }) and the older
+// single-object shape ({ username, password }).
+const USERS =
+  (Array.isArray(adminAuth.users) && adminAuth.users) ||
+  (adminAuth.username
+    ? [{ username: adminAuth.username, password: adminAuth.password }]
+    : []);
+
+// The key the browser sends to the Worker to authorise issuing. A shared
+// apiKey keeps the user list (login gate) decoupled from the Worker secret,
+// so adding a user is just editing this JSON — no Worker redeploy.
+const API_KEY =
+  adminAuth.apiKey ||
+  (USERS[0] && USERS[0].password) ||
+  adminAuth.password ||
+  "";
 
 /* ------------------------------------------------------------------ */
 /* Login screen                                                        */
@@ -17,9 +34,12 @@ function Login({ onLogin }) {
 
   const submit = (e) => {
     e.preventDefault();
-    if (u === adminAuth.username && p === adminAuth.password) {
+    const match = USERS.find(
+      (x) => x.username === u.trim() && x.password === p
+    );
+    if (match) {
       setErr("");
-      onLogin(p);
+      onLogin(match.username);
     } else {
       setErr("Invalid username or password.");
     }
@@ -91,7 +111,7 @@ const FIELDS = {
 /* ------------------------------------------------------------------ */
 /* Main console                                                        */
 /* ------------------------------------------------------------------ */
-function Console({ adminKey, onLogout }) {
+function Console({ username, onLogout }) {
   const [type, setType] = useState("offer");
   const [form, setForm] = useState({ issueDate: todayISO() });
   const [seal, setSeal] = useState({ url: null, aspect: 2 });
@@ -122,14 +142,14 @@ function Console({ adminKey, onLogout }) {
   const fetchDocs = useCallback(async () => {
     try {
       const res = await fetch(`${API}/api/documents`, {
-        headers: { "X-Admin-Key": adminKey },
+        headers: { "X-Admin-Key": API_KEY },
       });
       const j = await res.json();
       if (j.ok) setDocs(j.documents);
     } catch (_) {
       /* ignore listing errors */
     }
-  }, [adminKey]);
+  }, []);
 
   useEffect(() => {
     fetchDocs();
@@ -184,8 +204,8 @@ function Console({ adminKey, onLogout }) {
       const { recipient, ...meta } = form;
       const res = await fetch(`${API}/api/issue`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "X-Admin-Key": adminKey },
-        body: JSON.stringify({ id, type, recipient, pdfBase64: base64, meta }),
+        headers: { "Content-Type": "application/json", "X-Admin-Key": API_KEY },
+        body: JSON.stringify({ id, type, recipient, pdfBase64: base64, meta, issuer: username }),
       });
       const j = await res.json();
       if (!res.ok || !j.ok) throw new Error(j.error || `Server error (${res.status})`);
@@ -213,12 +233,17 @@ function Console({ adminKey, onLogout }) {
               Issue & register verifiable documents
             </div>
           </div>
-          <button
-            onClick={onLogout}
-            className="text-sm bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-lg"
-          >
-            Sign out
-          </button>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-slate-300 hidden sm:inline">
+              Signed in as <span className="font-semibold text-white">{username}</span>
+            </span>
+            <button
+              onClick={onLogout}
+              className="text-sm bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-lg"
+            >
+              Sign out
+            </button>
+          </div>
         </div>
       </div>
 
@@ -391,7 +416,7 @@ function Console({ adminKey, onLogout }) {
 
 /* ------------------------------------------------------------------ */
 export default function Admin() {
-  const [adminKey, setAdminKey] = useState(() => {
+  const [username, setUsername] = useState(() => {
     try {
       return sessionStorage.getItem(SS_KEY) || "";
     } catch (_) {
@@ -403,13 +428,13 @@ export default function Admin() {
     document.title = "IVIS LABS · Admin";
   }, []);
 
-  const login = (key) => {
+  const login = (name) => {
     try {
-      sessionStorage.setItem(SS_KEY, key);
+      sessionStorage.setItem(SS_KEY, name);
     } catch (_) {
       /* ignore */
     }
-    setAdminKey(key);
+    setUsername(name);
   };
 
   const logout = () => {
@@ -418,9 +443,9 @@ export default function Admin() {
     } catch (_) {
       /* ignore */
     }
-    setAdminKey("");
+    setUsername("");
   };
 
-  if (!adminKey) return <Login onLogin={login} />;
-  return <Console adminKey={adminKey} onLogout={logout} />;
+  if (!username) return <Login onLogin={login} />;
+  return <Console username={username} onLogout={logout} />;
 }
