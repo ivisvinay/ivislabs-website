@@ -54,11 +54,24 @@ function drawVerifyBlock(doc, { qr, id, verifyUrl, x, y, size }) {
   doc.text(`Verification ID: ${id}`, x + size + 4, y + 22);
 }
 
-function drawSeal(doc, sealDataUrl, sealAspect, x, y, w) {
-  if (!sealDataUrl) return 0;
-  const h = w / (sealAspect || 2);
-  doc.addImage(sealDataUrl, "PNG", x, y, w, h);
-  return h;
+/**
+ * Draw the seal fitted inside a max box (preserving aspect ratio) so a
+ * near-square seal image never overflows the layout. If `boxW` is given the
+ * seal is centred horizontally within that box.
+ * Returns the drawn { w, h }.
+ */
+function drawSeal(doc, sealDataUrl, sealAspect, x, y, maxW, maxH, boxW) {
+  if (!sealDataUrl) return { w: 0, h: 0 };
+  const aspect = sealAspect || 1;
+  let w = maxW;
+  let h = w / aspect;
+  if (h > maxH) {
+    h = maxH;
+    w = h * aspect;
+  }
+  const dx = boxW ? x + (boxW - w) / 2 : x;
+  doc.addImage(sealDataUrl, "PNG", dx, y, w, h);
+  return { w, h };
 }
 
 /* ------------------------------------------------------------------ */
@@ -134,7 +147,7 @@ function buildOffer(doc, { data, qr, id, verifyUrl, sealDataUrl, sealAspect }) {
 
   // Signature + seal
   const sey = y + 6;
-  const sh = drawSeal(doc, sealDataUrl, sealAspect, M, sey, 48);
+  const { h: sh } = drawSeal(doc, sealDataUrl, sealAspect, M, sey, 40, 30);
   doc.setDrawColor(...GREY);
   doc.setLineWidth(0.3);
   doc.line(M, sey + sh + 3, M + 60, sey + sh + 3);
@@ -232,27 +245,29 @@ function buildCertificate(doc, opts, variant) {
   const wrapped = doc.splitTextToSize(body, 190);
   doc.text(wrapped, W / 2, 118, { align: "center" });
 
-  // Seal + signature (right)
-  const sealW = 46;
-  const sx = W - 30 - sealW;
-  const sy = 150;
-  const sh = drawSeal(doc, sealDataUrl, sealAspect, sx, sy, sealW);
+  // Seal + signature (right), fitted within a fixed box and centred.
+  const boxW = 46;
+  const sx = W - 30 - boxW;
+  const sy = 138;
+  const { h: sh } = drawSeal(doc, sealDataUrl, sealAspect, sx, sy, boxW, 34, boxW);
+  const lineY = sy + Math.max(sh, 20) + 3;
   doc.setDrawColor(...GREY);
   doc.setLineWidth(0.3);
-  doc.line(sx - 6, sy + sh + 3, sx + sealW + 6, sy + sh + 3);
+  doc.line(sx - 6, lineY, sx + boxW + 6, lineY);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
   doc.setTextColor(...NAVY);
-  doc.text("Authorized Signatory", sx + sealW / 2, sy + sh + 9, { align: "center" });
+  doc.text("Authorized Signatory", sx + boxW / 2, lineY + 6, { align: "center" });
 
   // Date (left)
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
   doc.setTextColor(...GREY);
-  doc.text(`Date of issue: ${data.issueDate || ""}`, 30, 176);
-  doc.text(COMPANY.web, 30, 182);
+  doc.text(`Date of issue: ${data.issueDate || ""}`, 30, 158);
+  doc.text(COMPANY.web, 30, 164);
 
-  drawVerifyBlock(doc, { qr, id, verifyUrl, x: 30, y: 186, size: 20 });
+  // Verify block — kept inside the inner border (bottom edge ~196mm).
+  drawVerifyBlock(doc, { qr, id, verifyUrl, x: 30, y: 168, size: 18 });
 }
 
 /**
