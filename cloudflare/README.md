@@ -71,6 +71,22 @@ export CLOUDFLARE_API_TOKEN=<token with Workers + R2 edit>
 Note: because `adminAuth.json` is bundled into the public site, these passwords
 are technically visible in the site's JavaScript — see the security note below.
 
+## Bulk issue from Excel
+
+The admin console has a **Bulk issue from Excel** panel:
+
+1. Pick the document type, click **Download template** to get a pre-filled
+   `.xlsx` (headers + one example row).
+2. Fill one row per recipient (dates as `YYYY-MM-DD`; Excel date cells also work).
+3. Upload the file — rows are validated and previewed.
+4. **Generate & Issue** — every row is generated, registered in R2 with its own
+   QR code, and all PDFs are bundled into a single ZIP (plus `manifest.csv`
+   listing each recipient, verification ID, and verify URL) that downloads
+   automatically.
+
+Add an optional `type` column (`offer` / `completion` / `performance`) to mix
+document types in one sheet. Failed rows are listed and don't block the rest.
+
 ## The seal + signature
 
 Place your combined seal+signature image at `public/seal.png`

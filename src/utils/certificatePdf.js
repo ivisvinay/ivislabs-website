@@ -281,6 +281,7 @@ export async function generateDocument({ type, id, verifyUrl, data, sealDataUrl,
     orientation: portrait ? "portrait" : "landscape",
     unit: "mm",
     format: "a4",
+    compress: true,
   });
 
   const opts = { data, qr, id, verifyUrl, sealDataUrl, sealAspect };
