@@ -130,13 +130,15 @@ function drawFront({ intern, batchName, photo, logo }) {
     ctx.restore();
     drawContain(ctx, logo, mm(5), mm(5.5), mm(8), mm(8));
   }
-  ctx.textAlign = "left";
+  // Centre the wordmark (offset right of the logo when one is drawn).
+  const tx = logo ? (mm(16) + W) / 2 : cx;
+  ctx.textAlign = "center";
   ctx.fillStyle = "#ffffff";
   ctx.font = `bold ${mm(5)}px ${FONT}`;
-  ctx.fillText(COMPANY.short, mm(logo ? 16.5 : 5), mm(10.3));
+  ctx.fillText(COMPANY.short, tx, mm(10.3));
   ctx.font = `${mm(2.3)}px ${FONT}`;
   ctx.fillStyle = "#c7d2fe";
-  ctx.fillText(COMPANY.tagline, mm(logo ? 16.5 : 5), mm(14));
+  ctx.fillText(COMPANY.tagline, tx, mm(14));
 
   // "INTERN" tag
   ctx.fillStyle = BLUE;
