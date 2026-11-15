@@ -1,4 +1,4 @@
-# IVIS LABS – Document issuing & verification
+# IVIS LABS – Documents, verification & intern portal
 
 A private `/admin` console issues three document types and registers each one in
 Cloudflare R2 so it can be verified via a QR code:
@@ -12,7 +12,7 @@ Cloudflare R2 so it can be verified via a QR code:
 ```
 Admin (/admin, React)                     Cloudflare Worker + R2
 ─────────────────────                     ──────────────────────
-1. login (adminAuth.json)
+1. login (/api/admin/login)
 2. fill form, generate PDF   ──POST──►    /api/issue   (needs admin password)
    (jsPDF + QR + seal.png)                 └─ stores documents/<id>.pdf
                                               stores records/<id>.json
@@ -34,42 +34,68 @@ red "Not verified" page.
 | Worker | `ivislabs-certificates` |
 | Worker URL | `https://ivislabs-certificates.vinay-f46.workers.dev` |
 | R2 bucket | `ivislabs-certificates` |
-| Bindings | `CERTS` (R2), `ADMIN_USER`, `ADMIN_PASS` (secrets) |
+| D1 database | `ivislabs-interns` (created by `deploy.sh`) |
+| Bindings | `CERTS` (R2), `DB` (D1), `CHAT` (Durable Object `ChatHub`), `ADMIN_USERS`, `SESSION_SECRET` (secrets) |
 
 The React app reaches the Worker via `REACT_APP_CERT_API` in `.env`.
 
 ## Redeploying the Worker
 
 ```bash
-export CLOUDFLARE_API_TOKEN=<token with Workers + R2 edit>
+cp cloudflare/secrets.example.env cloudflare/.secrets.env   # first time; set admin users
+export CLOUDFLARE_API_TOKEN=<token with Workers Scripts + R2 + D1 edit>
 ./cloudflare/deploy.sh
 ```
 
+Code: `worker.js` (router + documents), `interns.js` (intern portal API),
+`chatHub.js` (real-time chat Durable Object), `lib.js` (auth, CORS, dates).
+
 ## Admin users
 
-`src/config/adminAuth.json` holds the login gate and the shared Worker key:
+Admin logins are checked **by the Worker**, not in the browser. They live in
+`ADMIN_USERS` in `cloudflare/.secrets.env` (gitignored):
 
-```json
-{
-  "apiKey": "iVis2021",
-  "users": [
-    { "username": "admin",  "password": "iVis2021" },
-    { "username": "vinay",  "password": "another-pass" }
-  ]
-}
+```bash
+ADMIN_USERS='[{"username":"admin","password":"..."},{"username":"vinay","password":"..."}]'
 ```
 
-- **Add / remove a user:** edit the `users` array and redeploy the **site**
-  (push to `ivislabs`). No Worker change is needed — every user shares `apiKey`
-  to talk to the Worker, and the document record stores which username issued it.
-- **`apiKey`** must equal the Worker's `ADMIN_PASS` secret (`iVis2021`). Change it
-  in both `adminAuth.json` and `cloudflare/deploy.sh`, then run
-  `./cloudflare/deploy.sh` and redeploy the site.
-- (Optional) For per-user Worker keys instead of one shared key, set an
-  `ADMIN_KEYS` secret (comma-separated) on the Worker; it accepts any of them.
+Add/remove a user → edit that line → `./cloudflare/deploy.sh`. Removing a user
+also ends their open sessions. Sessions are signed tokens (12 h for admins)
+using `SESSION_SECRET`; changing that secret signs everyone out.
 
-Note: because `adminAuth.json` is bundled into the public site, these passwords
-are technically visible in the site's JavaScript — see the security note below.
+## Intern portal (`/interns`)
+
+1. **Register** – candidates fill personal, academic (college, degree, specialization),
+   internship (duration, preferred start), address and emergency-contact details and
+   choose a password. Status: *pending*.
+2. **Approve** – `/admin` → **Interns** → open the candidate → choose a **batch**,
+   **start date** (end date auto-fills from the duration, editable) → Approve. The
+   intern gets an ID like `IVIS-INT-2026-0001`. Batch, dates and duration can be
+   changed any time; interns can be suspended (ID card then shows *revoked*) or
+   have their password reset (a temporary password is shown to the admin).
+3. **Calendar & daily reports** – approved interns see their internship calendar and
+   submit a daily report (activities, learnings, blockers, plan, hours, links) for
+   today or the previous 2 days (`REPORT_GRACE_DAYS` in `interns.js`). Sundays are
+   optional. Admins see the same calendar per intern and can leave feedback.
+4. **Chat** – each batch has a group channel; interns can also DM or create groups,
+   **only with interns in their own batch**. Messages are stored in D1 and pushed
+   live over WebSockets (`ChatHub`), with unread badges, online status, sound and
+   desktop notifications. **Ping** buzzes the other person (banner + sound +
+   vibration); limited to once per 30 s per chat.
+5. **Photo & ID card** – approved interns upload a photo (cropped to 3:4, stored in R2
+   under `interns/photos/`) and download a CR80 ID card (PDF or PNG). The QR code
+   opens `…/intern-id/<random token>`, a public page confirming the intern and
+   whether the card is active, expired or revoked.
+
+Data: D1 tables `interns`, `batches`, `reports`, `conversations`, `conv_members`,
+`conv_reads`, `messages` (created automatically by the Worker).
+
+Local development (Node 18+):
+
+```bash
+npx wrangler@4 dev -c cloudflare/wrangler.dev.toml --local     # API on :8787
+REACT_APP_CERT_API=http://localhost:8787 PORT=3001 npm start    # admin/admin
+```
 
 ## Bulk issue from Excel
 
@@ -92,13 +118,11 @@ document types in one sheet. Failed rows are listed and don't block the rest.
 Place your combined seal+signature image at `public/seal.png`
 (see `public/SEAL_README.md`). It is embedded into every generated PDF.
 
-## Security note (please read)
+## Security notes
 
-By design (per request) the admin credentials live in `src/config/adminAuth.json`,
-which is bundled into the public site — so the password is technically
-extractable from the site's JavaScript, and the Worker uses that same password to
-authorise issuing. This is fine against the intended threat (students copying a
-real certificate — the QR record defeats that). If you later want to harden it so
-the password is **not** shipped to browsers, the change is small: remove the
-password from `adminAuth.json`, add a `/api/login` check in the Worker, and have
-the login form validate against the Worker instead. Ask and it can be wired up.
+- No passwords are bundled into the site any more; the old shared `X-Admin-Key`
+  is no longer accepted once the Worker is redeployed without `ADMIN_PASS`.
+- The previous admin passwords were public (they were in the site's JavaScript and
+  in git history) — use new ones in `.secrets.env`.
+- Intern passwords are stored as PBKDF2-SHA256 hashes; photos and reports are only
+  served to the intern, their batchmates (photo only) and admins.

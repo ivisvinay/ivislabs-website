@@ -1,0 +1,29 @@
+# LOCAL DEVELOPMENT ONLY — production deploys use ./deploy.sh.
+#   npx wrangler@4 dev -c cloudflare/wrangler.dev.toml --local   (Node 18+)
+# then run the site with REACT_APP_CERT_API=http://localhost:8787 npm start
+# The name differs from production so an accidental `wrangler deploy` can't
+# overwrite the live Worker.
+name = "ivislabs-certificates-dev"
+main = "worker.js"
+compatibility_date = "2024-11-06"
+
+[[r2_buckets]]
+binding = "CERTS"
+bucket_name = "ivislabs-certificates-dev"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ivislabs-interns-dev"
+database_id = "00000000-0000-0000-0000-000000000000"
+
+[[durable_objects.bindings]]
+name = "CHAT"
+class_name = "ChatHub"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["ChatHub"]
+
+[vars]
+SESSION_SECRET = "local-dev-only"
+ADMIN_USERS = '[{"username":"admin","password":"admin"}]'

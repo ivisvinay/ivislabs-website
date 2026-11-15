@@ -27,6 +27,7 @@ import Careers from "./pages/Careers";
 // Admin console (and its PDF libraries) are only loaded when /admin is visited,
 // keeping the public bundle small.
 const Admin = lazy(() => import("./pages/Admin"));
+const InternPortal = lazy(() => import("./pages/interns/InternPortal"));
 
 // ✅ Auto-scroll helper component
 const ScrollToTopOnNavigation = () => {
@@ -41,7 +42,9 @@ const ScrollToTopOnNavigation = () => {
 // chrome (navbar, footer, chat) on the standalone /admin console.
 const AppShell = () => {
   const { pathname } = useLocation();
-  const isAdmin = pathname.startsWith("/admin");
+  // The admin console and intern portal are standalone apps without the
+  // public navbar/footer/chat widget.
+  const isAdmin = pathname.startsWith("/admin") || pathname.startsWith("/interns");
 
   return (
     <div className="App min-h-screen bg-white">
@@ -65,6 +68,14 @@ const AppShell = () => {
             element={
               <Suspense fallback={<div style={{ padding: 40 }}>Loading…</div>}>
                 <Admin />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/interns/*"
+            element={
+              <Suspense fallback={<div style={{ padding: 40 }}>Loading…</div>}>
+                <InternPortal />
               </Suspense>
             }
           />

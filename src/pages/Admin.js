@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import JSZip from "jszip";
-import adminAuth from "../config/adminAuth.json";
 import { DOC_TYPES, generateDocument } from "../utils/certificatePdf";
+import InternsAdmin from "./admin/InternsAdmin";
 
 const API = process.env.REACT_APP_CERT_API || "";
-const SS_KEY = "ivis_admin_user";
+const SS_KEY = "ivis_admin_session";
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
@@ -15,22 +15,9 @@ const uuid = () =>
 
 const DOC_LABEL = (t) => (DOC_TYPES.find((d) => d.key === t) || {}).label || t;
 
-// Support both the multi-user shape ({ apiKey, users: [...] }) and the older
-// single-object shape ({ username, password }).
-const USERS =
-  (Array.isArray(adminAuth.users) && adminAuth.users) ||
-  (adminAuth.username
-    ? [{ username: adminAuth.username, password: adminAuth.password }]
-    : []);
-
-// The key the browser sends to the Worker to authorise issuing. A shared
-// apiKey keeps the user list (login gate) decoupled from the Worker secret,
-// so adding a user is just editing this JSON — no Worker redeploy.
-const API_KEY =
-  adminAuth.apiKey ||
-  (USERS[0] && USERS[0].password) ||
-  adminAuth.password ||
-  "";
+// Admin users live in the Worker's ADMIN_USERS secret; the browser only ever
+// holds a signed, expiring session token from /api/admin/login.
+const authHeaders = (token) => ({ Authorization: `Bearer ${token}` });
 
 /* ------------------------------------------------------------------ */
 /* Login screen                                                        */
@@ -39,17 +26,24 @@ function Login({ onLogin }) {
   const [u, setU] = useState("");
   const [p, setP] = useState("");
   const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
-    const match = USERS.find(
-      (x) => x.username === u.trim() && x.password === p
-    );
-    if (match) {
-      setErr("");
-      onLogin(match.username);
-    } else {
-      setErr("Invalid username or password.");
+    setErr("");
+    setBusy(true);
+    try {
+      const res = await fetch(`${API}/api/admin/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: u.trim(), password: p }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || !j.ok) throw new Error(j.error || "Invalid username or password.");
+      onLogin({ username: j.username, token: j.token });
+    } catch (e2) {
+      setErr(e2.message || "Could not sign in.");
+      setBusy(false);
     }
   };
 
@@ -78,8 +72,11 @@ function Login({ onLogin }) {
           onChange={(e) => setP(e.target.value)}
         />
         {err && <div className="text-sm text-red-600 mb-3">{err}</div>}
-        <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg transition">
-          Sign in
+        <button
+          disabled={busy}
+          className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-semibold py-2.5 rounded-lg transition"
+        >
+          {busy ? "Signing in…" : "Sign in"}
         </button>
       </form>
     </div>
@@ -119,7 +116,7 @@ const FIELDS = {
 /* ------------------------------------------------------------------ */
 /* Shared issue helper (used by the single form and the bulk uploader) */
 /* ------------------------------------------------------------------ */
-async function issueDocument({ type, data, seal, username }) {
+async function issueDocument({ type, data, seal, username, token }) {
   const id = uuid();
   const verifyUrl = `${API}/verify/${id}`;
   const { blob, base64, filename } = await generateDocument({
@@ -133,10 +130,11 @@ async function issueDocument({ type, data, seal, username }) {
   const { recipient, ...meta } = data;
   const res = await fetch(`${API}/api/issue`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", "X-Admin-Key": API_KEY },
+    headers: { "Content-Type": "application/json", ...authHeaders(token) },
     body: JSON.stringify({ id, type, recipient, pdfBase64: base64, meta, issuer: username }),
   });
   const j = await res.json().catch(() => ({}));
+  if (res.status === 401) throw new Error("Session expired — sign out and sign in again.");
   if (!res.ok || !j.ok) throw new Error(j.error || `Server error (${res.status})`);
   return { id, verifyUrl, blob, filename, recipient };
 }
@@ -260,7 +258,7 @@ function downloadTemplate(type) {
 /* ------------------------------------------------------------------ */
 /* Bulk uploader (Excel -> issue all -> download ZIP of PDFs)          */
 /* ------------------------------------------------------------------ */
-function BulkPanel({ type, seal, username, onIssued }) {
+function BulkPanel({ type, seal, username, token, onIssued }) {
   const [rows, setRows] = useState([]);
   const [fileName, setFileName] = useState("");
   const [parseError, setParseError] = useState("");
@@ -324,7 +322,7 @@ function BulkPanel({ type, seal, username, onIssued }) {
     for (let i = 0; i < valid.length; i++) {
       const row = valid[i];
       try {
-        const r = await issueDocument({ type: row.type, data: row.data, seal, username });
+        const r = await issueDocument({ type: row.type, data: row.data, seal, username, token });
         let name = r.filename;
         if (usedNames[name]) name = name.replace(/\.pdf$/, `_${usedNames[name] + 1}.pdf`);
         usedNames[r.filename] = (usedNames[r.filename] || 0) + 1;
@@ -496,7 +494,8 @@ function BulkPanel({ type, seal, username, onIssued }) {
 /* ------------------------------------------------------------------ */
 /* Main console                                                        */
 /* ------------------------------------------------------------------ */
-function Console({ username, onLogout }) {
+function Console({ username, token, onLogout }) {
+  const [section, setSection] = useState("docs");
   const [type, setType] = useState("offer");
   const [form, setForm] = useState({ issueDate: todayISO() });
   const [seal, setSeal] = useState({ url: null, aspect: 2 });
@@ -546,14 +545,15 @@ function Console({ username, onLogout }) {
   const fetchDocs = useCallback(async () => {
     try {
       const res = await fetch(`${API}/api/documents`, {
-        headers: { "X-Admin-Key": API_KEY },
+        headers: authHeaders(token),
       });
+      if (res.status === 401) return onLogout();
       const j = await res.json();
       if (j.ok) setDocs(j.documents);
     } catch (_) {
       /* ignore listing errors */
     }
-  }, []);
+  }, [token, onLogout]);
 
   useEffect(() => {
     fetchDocs();
@@ -596,6 +596,7 @@ function Console({ username, onLogout }) {
         data: form,
         seal,
         username,
+        token,
       });
       const downloadUrl = URL.createObjectURL(blob);
       setResult({ id, verifyUrl, downloadUrl, filename, recipient });
@@ -615,11 +616,27 @@ function Console({ username, onLogout }) {
       <div className="bg-slate-900 text-white">
         <div className="max-w-5xl mx-auto px-5 py-3 flex items-center justify-between">
           <div>
-            <div className="font-bold leading-tight">IVIS LABS · Document Admin</div>
+            <div className="font-bold leading-tight">IVIS LABS · Admin</div>
             <div className="text-xs text-slate-400">
-              Issue & register verifiable documents
+              Documents & intern management
             </div>
           </div>
+          <nav className="flex gap-1 bg-slate-800 rounded-lg p-1">
+            {[
+              ["docs", "Documents"],
+              ["interns", "Interns"],
+            ].map(([k, l]) => (
+              <button
+                key={k}
+                onClick={() => setSection(k)}
+                className={`text-sm px-3 py-1 rounded-md ${
+                  section === k ? "bg-white text-slate-900 font-semibold" : "text-slate-300 hover:text-white"
+                }`}
+              >
+                {l}
+              </button>
+            ))}
+          </nav>
           <div className="flex items-center gap-3">
             <span className="text-sm text-slate-300 hidden sm:inline">
               Signed in as <span className="font-semibold text-white">{username}</span>
@@ -634,6 +651,11 @@ function Console({ username, onLogout }) {
         </div>
       </div>
 
+      {section === "interns" ? (
+        <div className="max-w-6xl mx-auto px-5 py-8">
+          <InternsAdmin token={token} onAuthError={onLogout} />
+        </div>
+      ) : (
       <div className="max-w-5xl mx-auto px-5 py-8 grid md:grid-cols-3 gap-6">
         {/* Form column */}
         <div className="md:col-span-2 space-y-6">
@@ -736,7 +758,7 @@ function Console({ username, onLogout }) {
           )}
 
           {/* Bulk uploader */}
-          <BulkPanel type={type} seal={seal} username={username} onIssued={fetchDocs} />
+          <BulkPanel type={type} seal={seal} username={username} token={token} onIssued={fetchDocs} />
         </div>
 
         {/* Side column */}
@@ -800,17 +822,18 @@ function Console({ username, onLogout }) {
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 }
 
 /* ------------------------------------------------------------------ */
 export default function Admin() {
-  const [username, setUsername] = useState(() => {
+  const [session, setSession] = useState(() => {
     try {
-      return sessionStorage.getItem(SS_KEY) || "";
+      return JSON.parse(sessionStorage.getItem(SS_KEY) || "null");
     } catch (_) {
-      return "";
+      return null;
     }
   });
 
@@ -818,24 +841,24 @@ export default function Admin() {
     document.title = "IVIS LABS · Admin";
   }, []);
 
-  const login = (name) => {
+  const login = (s) => {
     try {
-      sessionStorage.setItem(SS_KEY, name);
+      sessionStorage.setItem(SS_KEY, JSON.stringify(s));
     } catch (_) {
       /* ignore */
     }
-    setUsername(name);
+    setSession(s);
   };
 
-  const logout = () => {
+  const logout = useCallback(() => {
     try {
       sessionStorage.removeItem(SS_KEY);
     } catch (_) {
       /* ignore */
     }
-    setUsername("");
-  };
+    setSession(null);
+  }, []);
 
-  if (!username) return <Login onLogin={login} />;
-  return <Console username={username} onLogout={logout} />;
+  if (!session || !session.token) return <Login onLogin={login} />;
+  return <Console username={session.username} token={session.token} onLogout={logout} />;
 }

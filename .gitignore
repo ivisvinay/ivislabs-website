@@ -2,3 +2,6 @@
 /.env.example
 /Dockerfile
 /node_modules
+# Worker deploy secrets
+cloudflare/.secrets.env
+.wrangler/

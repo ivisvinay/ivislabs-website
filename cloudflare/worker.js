@@ -2,9 +2,14 @@
  * IVIS LABS – Certificate / Document verification Worker
  *
  * Bindings (set at deploy time):
- *   CERTS       -> R2 bucket "ivislabs-certificates"
- *   ADMIN_USER  -> secret text (admin username)
- *   ADMIN_PASS  -> secret text (admin password) — required to ISSUE documents
+ *   CERTS          -> R2 bucket "ivislabs-certificates" (documents + intern photos)
+ *   DB             -> D1 database "ivislabs-interns" (intern portal)
+ *   CHAT           -> Durable Object namespace (ChatHub, real-time chat)
+ *   ADMIN_USERS    -> secret: JSON [{"username","password"}] for /api/admin/login
+ *   SESSION_SECRET -> secret: HMAC key for admin + intern session tokens
+ *   ADMIN_PASS     -> (legacy, optional) shared X-Admin-Key for document issuing
+ *
+ * Intern portal routes live in interns.js; this file keeps document issuing.
  *
  * R2 layout:
  *   records/<id>.json    metadata about an issued document
@@ -13,48 +18,19 @@
  * Public verification is read-only; issuing requires the admin password.
  */
 
-const ALLOWED_ORIGINS = [
-  "https://ivislabs.in",
-  "https://www.ivislabs.in",
-  "https://ivislabs-website.pages.dev",
-  "http://localhost:3000",
-  "http://localhost:3001",
-];
+import {
+  corsHeaders,
+  json,
+  esc,
+  base64ToBytes,
+  HttpError,
+  adminFromToken,
+  pageShell,
+  htmlResponse,
+} from "./lib.js";
+import { handleInterns } from "./interns.js";
 
-function corsHeaders(request) {
-  const origin = request.headers.get("Origin") || "";
-  const allow = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
-  return {
-    "Access-Control-Allow-Origin": allow,
-    "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, X-Admin-Key",
-    "Access-Control-Max-Age": "86400",
-    Vary: "Origin",
-  };
-}
-
-function json(data, status, request) {
-  return new Response(JSON.stringify(data), {
-    status: status || 200,
-    headers: { "Content-Type": "application/json", ...corsHeaders(request) },
-  });
-}
-
-function base64ToBytes(b64) {
-  const bin = atob(b64);
-  const len = bin.length;
-  const bytes = new Uint8Array(len);
-  for (let i = 0; i < len; i++) bytes[i] = bin.charCodeAt(i);
-  return bytes;
-}
-
-function esc(s) {
-  return String(s == null ? "" : s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
+export { ChatHub } from "./chatHub.js";
 
 const DOC_LABELS = {
   offer: "Internship Offer Letter",
@@ -78,14 +54,22 @@ function validKeys(env) {
   return keys;
 }
 
-function isAuthorized(request, env) {
+/**
+ * Admin auth for the document endpoints. Prefers a signed admin session token
+ * (Authorization: Bearer, from /api/admin/login). The old shared X-Admin-Key is
+ * still accepted only while ADMIN_PASS / ADMIN_KEYS secrets are set — remove
+ * those secrets to switch it off.
+ */
+async function authorizedAdmin(request, env) {
+  const fromToken = await adminFromToken(request, env);
+  if (fromToken) return fromToken;
   const key = request.headers.get("X-Admin-Key") || "";
   const keys = validKeys(env);
-  return keys.length > 0 && keys.includes(key);
+  return keys.length > 0 && keys.includes(key) ? "legacy-key" : null;
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const path = url.pathname.replace(/\/+$/, "") || "/";
 
@@ -94,9 +78,14 @@ export default {
     }
 
     try {
+      // ---- Intern portal, chat and admin login ----
+      const portal = await handleInterns(request, env, ctx, url, path);
+      if (portal) return portal;
+
       // ---- Issue a new document (admin only) ----
       if (path === "/api/issue" && request.method === "POST") {
-        if (!isAuthorized(request, env)) {
+        const admin = await authorizedAdmin(request, env);
+        if (!admin) {
           return json({ ok: false, error: "Unauthorized" }, 401, request);
         }
         const body = await request.json();
@@ -125,7 +114,8 @@ export default {
           recipient,
           meta: meta || {},
           issuedAt: new Date().toISOString(),
-          issuer: (issuer && String(issuer).slice(0, 80)) || env.ADMIN_USER || "admin",
+          issuer:
+            admin !== "legacy-key" ? admin : (issuer && String(issuer).slice(0, 80)) || env.ADMIN_USER || "admin",
         };
         await env.CERTS.put(`records/${id}.json`, JSON.stringify(record), {
           httpMetadata: { contentType: "application/json" },
@@ -140,7 +130,7 @@ export default {
 
       // ---- List issued documents (admin only) ----
       if (path === "/api/documents" && request.method === "GET") {
-        if (!isAuthorized(request, env)) {
+        if (!(await authorizedAdmin(request, env))) {
           return json({ ok: false, error: "Unauthorized" }, 401, request);
         }
         const list = await env.CERTS.list({ prefix: "records/", limit: 1000 });
@@ -191,42 +181,12 @@ export default {
 
       return new Response("Not found", { status: 404, headers: corsHeaders(request) });
     } catch (err) {
-      return json({ ok: false, error: String(err && err.message || err) }, 500, request);
+      if (err instanceof HttpError) return json({ ok: false, error: err.message }, err.status, request);
+      console.error(err);
+      return json({ ok: false, error: "Server error" }, 500, request);
     }
   },
 };
-
-function htmlResponse(html, status) {
-  return new Response(html, {
-    status: status || 200,
-    headers: { "Content-Type": "text/html; charset=utf-8" },
-  });
-}
-
-function pageShell(title, body) {
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${esc(title)} · IVIS LABS Verification</title>
-<style>
-  :root{color-scheme:light}
-  *{box-sizing:border-box}
-  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#f1f5f9;color:#0f172a;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
-  .card{background:#fff;max-width:560px;width:100%;border-radius:16px;box-shadow:0 10px 40px rgba(2,6,23,.12);overflow:hidden}
-  .bar{padding:14px 24px;color:#fff;font-weight:700;letter-spacing:.3px;display:flex;align-items:center;gap:10px}
-  .ok{background:#16a34a}.bad{background:#dc2626}
-  .body{padding:24px 28px}
-  h1{font-size:20px;margin:0 0 4px}
-  .muted{color:#64748b;font-size:14px}
-  table{width:100%;border-collapse:collapse;margin-top:16px;font-size:15px}
-  td{padding:9px 0;border-bottom:1px solid #eef2f7;vertical-align:top}
-  td.k{color:#64748b;width:150px;font-size:13px;text-transform:uppercase;letter-spacing:.4px}
-  .btn{display:inline-block;margin-top:20px;background:#2563eb;color:#fff;text-decoration:none;padding:11px 18px;border-radius:10px;font-weight:600;font-size:14px}
-  .brand{padding:16px 28px;border-top:1px solid #eef2f7;font-size:12px;color:#94a3b8;display:flex;justify-content:space-between}
-  code{background:#f1f5f9;padding:2px 6px;border-radius:6px;font-size:12px}
-</style></head><body><div class="card">${body}
-<div class="brand"><span>IVIS LABS · Document Verification</span><span>ivislabs.in</span></div>
-</div></body></html>`;
-}
 
 function htmlVerified(r, origin) {
   const m = r.meta || {};
