@@ -127,7 +127,7 @@ export default function AdminReports({ call, token, batches, today, onOpenIntern
           )}
 
           {!reports.length && <div className="text-sm text-slate-500">No reports {q ? "match your search" : "for this day"}.</div>}
-          <div className="grid lg:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {reports.map((r) => (
               <ReportCard key={r.id} r={r} token={token} onOpenIntern={onOpenIntern} onComment={comment} />
             ))}
@@ -159,7 +159,7 @@ function ReportCard({ r, token, onOpenIntern, onComment }) {
     ["Links", r.links],
   ].filter(([, v]) => v);
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 flex flex-col">
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 flex flex-col min-w-0">
       <div className="flex items-center gap-3 mb-3">
         <Avatar id={r.intern_id} name={r.full_name} hasPhoto={r.has_photo} photoPath={`/api/admin/interns/${r.intern_id}/photo`} token={token} version={r.photo_updated_at} size={36} />
         <button className="flex-1 min-w-0 text-left" onClick={() => onOpenIntern(r.intern_id)}>

@@ -17,21 +17,19 @@ const FILTERS = [
   { key: "all", label: "All" },
 ];
 
-const VIEWS = [
-  { key: "list", label: "Interns" },
-  { key: "reports", label: "Daily reports" },
-  { key: "cards", label: "ID cards" },
-  { key: "messages", label: "Messages" },
-];
-
 /**
  * Admin › Interns: approve registrations, manage batches and schedules, review
  * everyone's daily reports, view ID cards, and message interns.
  */
-export default function InternsAdmin({ token, onAuthError }) {
+/**
+ * Controlled by the admin console: `view` is "list" | "reports" | "cards" |
+ * "messages"; `navTick` changes whenever the admin taps a nav item (resets
+ * drill-downs); `onBadges({ pending, unread })` feeds the nav badges.
+ */
+export default function InternsAdmin({ token, onAuthError, view, onView, navTick, onBadges }) {
+  const setView = onView;
   const [interns, setInterns] = useState(null);
   const [today, setToday] = useState(todayIST());
-  const [view, setView] = useState("list");
   const [inbox, setInbox] = useState(null);
   const [draft, setDraft] = useState(null); // { ids, text, nonce } prefilled compose
   const [chatWith, setChatWith] = useState(null);
@@ -103,6 +101,19 @@ export default function InternsAdmin({ token, onAuthError }) {
     return c;
   }, [interns]);
 
+  // Tapping a nav item returns to that tab's top level.
+  useEffect(() => {
+    if (!navTick) return;
+    setSelectedId(null);
+    setDraft(null);
+    setChatWith(null);
+  }, [navTick]);
+
+  const unread = inbox ? inbox.unread : 0;
+  useEffect(() => {
+    if (onBadges) onBadges({ pending: counts.pending || 0, unread });
+  }, [onBadges, counts.pending, unread]);
+
   const q = search.trim().toLowerCase();
   const shown = (interns || []).filter(
     (i) =>
@@ -115,31 +126,6 @@ export default function InternsAdmin({ token, onAuthError }) {
     setInterns((list) => list.map((i) => (i.id === row.id ? { ...i, ...row } : i)));
     call("/api/admin/batches").then((b) => setBatches(b.batches)).catch(() => {});
   };
-
-  const nav = (
-    <div className="flex gap-1 border-b border-slate-200 overflow-x-auto">
-      {VIEWS.map((v) => (
-        <button
-          key={v.key}
-          onClick={() => {
-            setView(v.key);
-            if (v.key === "list") setSelectedId(null);
-            if (v.key === "messages") {
-              setDraft(null);
-              setChatWith(null);
-            }
-          }}
-          className={`px-3 sm:px-4 py-2 text-sm font-medium border-b-2 transition whitespace-nowrap ${
-            view === v.key ? "border-blue-600 text-blue-700" : "border-transparent text-slate-500 hover:text-slate-800"
-          }`}
-        >
-          {v.label}
-          {v.key === "list" && counts.pending ? <span className="ml-1.5 bg-amber-400 text-slate-900 text-[10px] font-bold rounded-full px-1.5 py-0.5">{counts.pending}</span> : null}
-          {v.key === "messages" && inbox && inbox.unread ? <span className="ml-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full px-1.5 py-0.5">{inbox.unread}</span> : null}
-        </button>
-      ))}
-    </div>
-  );
 
   let body;
   if (view === "reports") {
@@ -163,12 +149,7 @@ export default function InternsAdmin({ token, onAuthError }) {
   } else {
     body = renderList();
   }
-  return (
-    <div className="space-y-6">
-      {nav}
-      {body}
-    </div>
-  );
+  return body;
 
   function renderList() {
     if (selected) {
@@ -193,14 +174,15 @@ export default function InternsAdmin({ token, onAuthError }) {
 
     return (
       <div className="space-y-6">
-        <div className="grid md:grid-cols-3 gap-6">
-          <div className="md:col-span-2 space-y-4">
-            <div className="flex flex-wrap items-center gap-2">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 min-w-0">
+          <div className="md:col-span-2 space-y-4 min-w-0">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+              <div className="flex gap-2 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 pb-1 sm:pb-0">
               {FILTERS.map((f) => (
                 <button
                   key={f.key}
                   onClick={() => setFilter(f.key)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition ${
+                  className={`shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg text-sm font-medium border transition ${
                     filter === f.key ? "bg-blue-600 text-white border-blue-600" : "bg-white text-slate-700 border-slate-200 hover:border-blue-300"
                   }`}
                 >
@@ -208,6 +190,7 @@ export default function InternsAdmin({ token, onAuthError }) {
                   {counts[f.key] ? <span className="ml-1.5 opacity-75">{counts[f.key]}</span> : null}
                 </button>
               ))}
+              </div>
               <input className={`${inputCls} sm:w-56 sm:ml-auto`} placeholder="Search name, email, college…" value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>
             {error && <Alert>{error}</Alert>}
@@ -414,8 +397,8 @@ function InternDetail({ intern, today, batches, call, token, onBack, onUpdated, 
       <button onClick={onBack} className="text-sm text-blue-600 hover:underline">
         ← All interns
       </button>
-      <div className="grid md:grid-cols-3 gap-6">
-        <Card className="md:col-span-2">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 min-w-0">
+        <Card className="md:col-span-2 min-w-0">
           <div className="flex items-start gap-4 mb-5">
             <Avatar id={intern.id} name={intern.full_name} hasPhoto={intern.has_photo} photoPath={`/api/admin/interns/${intern.id}/photo`} token={token} version={intern.photo_updated_at} size={72} />
             <div className="min-w-0">

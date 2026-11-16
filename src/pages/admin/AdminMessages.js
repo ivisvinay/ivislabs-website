@@ -35,7 +35,7 @@ export default function AdminMessages({ call, token, interns, batches, inbox, re
   const openId = view.internId;
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex h-[calc(100vh-220px)] min-h-[520px]">
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex h-[calc(100dvh-176px)] md:h-[calc(100vh-120px)] min-h-[420px]">
       <aside className={`${view.compose || openId ? "hidden md:flex" : "flex"} w-full md:w-80 shrink-0 flex-col border-r border-slate-100`}>
         <div className="p-3 border-b border-slate-100 space-y-2">
           <Button className="w-full" onClick={() => setView({ compose: true })}>

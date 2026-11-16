@@ -494,8 +494,42 @@ function BulkPanel({ type, seal, username, token, onIssued }) {
 /* ------------------------------------------------------------------ */
 /* Main console                                                        */
 /* ------------------------------------------------------------------ */
+const Icon = ({ d, className = "w-5 h-5" }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+    {d.map((x, i) => (
+      <path key={i} d={x} />
+    ))}
+  </svg>
+);
+const ICONS = {
+  docs: ["M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z", "M14 3v5h5", "M9 13h6", "M9 17h6"],
+  list: ["M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2", "M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z", "M22 21v-2a4 4 0 0 0-3-3.87", "M16 3.13a4 4 0 0 1 0 7.75"],
+  reports: ["M8 2v4", "M16 2v4", "M3 10h18", "M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z", "M8 15l2 2 4-4"],
+  cards: ["M4 5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z", "M9 12a2 2 0 1 0 0-4 2 2 0 0 0 0 4z", "M5.5 16a3.5 3.5 0 0 1 7 0", "M15 10h4", "M15 14h3"],
+  chat: ["M21 12a8 8 0 0 1-11.6 7.1L4 21l1.9-5.4A8 8 0 1 1 21 12z", "M8.5 12h.01", "M12 12h.01", "M15.5 12h.01"],
+  logout: ["M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4", "M16 17l5-5-5-5", "M21 12H9"],
+};
+const NAV = [
+  ["docs", "Documents", "Documents"],
+  ["list", "Interns", "Interns"],
+  ["reports", "Daily reports", "Reports"],
+  ["cards", "ID cards", "ID cards"],
+];
+
+function Badge({ n, tone = "bg-red-500 text-white" }) {
+  if (!n) return null;
+  return <span className={`min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold flex items-center justify-center ${tone}`}>{n > 99 ? "99+" : n}</span>;
+}
+
 function Console({ username, token, onLogout }) {
-  const [section, setSection] = useState("docs");
+  const [section, setSectionState] = useState("docs");
+  const [navTick, setNavTick] = useState(0);
+  const [badges, setBadges] = useState({ pending: 0, unread: 0 });
+  const go = (k) => {
+    setSectionState(k);
+    setNavTick((n) => n + 1);
+    window.scrollTo(0, 0);
+  };
   const [type, setType] = useState("offer");
   const [form, setForm] = useState({ issueDate: todayISO() });
   const [seal, setSeal] = useState({ url: null, aspect: 2 });
@@ -613,50 +647,78 @@ function Console({ username, token, onLogout }) {
   return (
     <div className="min-h-screen bg-slate-100">
       {/* Top bar */}
-      <div className="bg-slate-900 text-white">
-        <div className="max-w-5xl mx-auto px-5 py-3 flex items-center justify-between">
-          <div>
-            <div className="font-bold leading-tight">IVIS LABS · Admin</div>
-            <div className="text-xs text-slate-400">
-              Documents & intern management
+      <header className="bg-slate-900 text-white sticky top-0 z-30">
+        <div className="max-w-6xl mx-auto px-4 sm:px-5 py-2.5 flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="font-bold leading-tight truncate">IVIS LABS · Admin</div>
+            <div className="text-xs text-slate-400 truncate">
+              <span className="hidden sm:inline">Documents & intern management · </span>
+              <span className="text-slate-300">{username}</span>
             </div>
           </div>
-          <nav className="flex gap-1 bg-slate-800 rounded-lg p-1">
-            {[
-              ["docs", "Documents"],
-              ["interns", "Interns"],
-            ].map(([k, l]) => (
+          <nav className="hidden md:flex gap-1 bg-slate-800 rounded-lg p-1">
+            {NAV.map(([k, label]) => (
               <button
                 key={k}
-                onClick={() => setSection(k)}
-                className={`text-sm px-3 py-1 rounded-md ${
+                onClick={() => go(k)}
+                className={`text-sm px-3 py-1 rounded-md flex items-center gap-1.5 ${
                   section === k ? "bg-white text-slate-900 font-semibold" : "text-slate-300 hover:text-white"
                 }`}
               >
-                {l}
+                {label}
+                {k === "list" && <Badge n={badges.pending} tone="bg-amber-400 text-slate-900" />}
               </button>
             ))}
           </nav>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-slate-300 hidden sm:inline">
-              Signed in as <span className="font-semibold text-white">{username}</span>
-            </span>
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <button
-              onClick={onLogout}
-              className="text-sm bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-lg"
+              onClick={() => go("messages")}
+              className={`relative p-2 rounded-lg ${section === "messages" ? "bg-white text-slate-900" : "text-slate-200 hover:bg-slate-800"}`}
+              title="Messages"
+              aria-label={`Messages${badges.unread ? `, ${badges.unread} unread` : ""}`}
             >
-              Sign out
+              <Icon d={ICONS.chat} className="w-6 h-6" />
+              {badges.unread > 0 && (
+                <span className="absolute -top-0.5 -right-0.5">
+                  <Badge n={badges.unread} />
+                </span>
+              )}
+            </button>
+            <button onClick={onLogout} className="text-sm bg-slate-700 hover:bg-slate-600 p-2 sm:px-3 sm:py-1.5 rounded-lg flex items-center gap-1.5" title="Sign out" aria-label="Sign out">
+              <Icon d={ICONS.logout} className="w-5 h-5 sm:hidden" />
+              <span className="hidden sm:inline">Sign out</span>
             </button>
           </div>
         </div>
+      </header>
+
+      {/* Bottom navigation (phones & small tablets) */}
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white border-t border-slate-200 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+        <div className="grid grid-cols-4">
+          {NAV.map(([k, , short]) => (
+            <button key={k} onClick={() => go(k)} className={`relative flex flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-medium ${section === k ? "text-blue-600" : "text-slate-500"}`}>
+              {section === k && <span className="absolute top-0 inset-x-6 h-0.5 rounded-full bg-blue-600" />}
+              <span className="relative">
+                <Icon d={ICONS[k]} className="w-6 h-6" />
+                {k === "list" && badges.pending > 0 && (
+                  <span className="absolute -top-1.5 -right-2.5">
+                    <Badge n={badges.pending} tone="bg-amber-400 text-slate-900" />
+                  </span>
+                )}
+              </span>
+              {short}
+            </button>
+          ))}
+        </div>
+      </nav>
+
+      {/* Intern sections stay mounted so message/pending badges keep updating. */}
+      <div className={section === "docs" ? "hidden" : "max-w-6xl mx-auto px-4 sm:px-5 pt-4 sm:pt-6 pb-24 md:pb-8"}>
+        <InternsAdmin token={token} onAuthError={onLogout} view={section} onView={setSectionState} navTick={navTick} onBadges={setBadges} />
       </div>
 
-      {section === "interns" ? (
-        <div className="max-w-6xl mx-auto px-5 py-8">
-          <InternsAdmin token={token} onAuthError={onLogout} />
-        </div>
-      ) : (
-      <div className="max-w-5xl mx-auto px-5 py-8 grid md:grid-cols-3 gap-6">
+      {section === "docs" && (
+      <div className="max-w-5xl mx-auto px-4 sm:px-5 pt-4 sm:pt-8 pb-24 md:pb-8 grid md:grid-cols-3 gap-6">
         {/* Form column */}
         <div className="md:col-span-2 space-y-6">
           {/* Type selector */}
