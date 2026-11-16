@@ -67,6 +67,13 @@ export default function ChatPanel({ chat, me, token }) {
       const info = contactById[other.id] || {};
       return <Avatar id={other.id} name={other.full_name} hasPhoto={info.has_photo} photoPath={`/api/interns/photo/${other.id}`} token={token} size={size} online={online.has(other.id)} />;
     }
+    if (c.type === "admin") {
+      return (
+        <span className="shrink-0 rounded-xl flex items-center justify-center text-white font-bold bg-blue-600" style={{ width: size, height: size, fontSize: size * 0.32 }}>
+          IVIS
+        </span>
+      );
+    }
     return (
       <span className={`shrink-0 rounded-xl flex items-center justify-center text-white font-bold ${c.type === "batch" ? "bg-slate-900" : "bg-indigo-500"}`} style={{ width: size, height: size }}>
         {c.type === "batch" ? "#" : "👥"}
@@ -104,6 +111,8 @@ export default function ChatPanel({ chat, me, token }) {
               ? `${last.sender_id === me.id ? "You: " : ""}${last.kind === "ping" ? "🔔 Ping" : last.body}`
               : c.type === "batch"
               ? "Say hello to your batch!"
+              : c.type === "admin"
+              ? "Questions? Message the IVIS LABS team"
               : "No messages yet";
             return (
               <button key={c.id} onClick={() => open(c.id)} className={`w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-slate-50 ${c.id === activeId ? "bg-blue-50" : ""}`}>
@@ -230,8 +239,10 @@ function Thread({ chat, conv, me, contactById, avatar, onBack, onError }) {
       const other = (conv.members || []).find((m) => m.id !== me.id);
       return other && chat.online.has(other.id) ? "Online" : "Offline";
     }
+    if (conv.type === "admin") return "Private chat with the IVIS LABS admins";
     return (conv.members || []).map((m) => (m.id === me.id ? "You" : m.full_name.split(" ")[0])).join(", ");
   })();
+  const oneToOne = conv.type === "dm" || conv.type === "admin";
 
   let lastDay = "";
   return (
@@ -245,7 +256,7 @@ function Thread({ chat, conv, me, contactById, avatar, onBack, onError }) {
           <div className="font-semibold text-sm text-slate-900 truncate">{conversationTitle(conv, me.id)}</div>
           <div className="text-xs text-slate-500 truncate">{subtitle}</div>
         </div>
-        <Button variant="light" className="px-3" onClick={ping} disabled={pinging} title={conv.type === "dm" ? "Ping — buzz them with an alert" : "Ping everyone in this chat"}>
+        <Button variant="light" className="px-3" onClick={ping} disabled={pinging} title={oneToOne ? "Ping — buzz them with an alert" : "Ping everyone in this chat"}>
           🔔 Ping
         </Button>
         {conv.type === "group" && (
@@ -285,7 +296,7 @@ function Thread({ chat, conv, me, contactById, avatar, onBack, onError }) {
               {m.kind === "ping" ? (
                 <div className="text-center my-2">
                   <span className="text-xs bg-amber-100 text-amber-800 rounded-full px-3 py-1">
-                    🔔 {mine ? "You" : m.sender_name} pinged {conv.type === "dm" ? (mine ? "them" : "you") : "everyone"} · {fmtTime(m.created_at)}
+                    🔔 {mine ? "You" : m.sender_name} pinged {oneToOne ? (mine ? "them" : "you") : "everyone"} · {fmtTime(m.created_at)}
                   </span>
                 </div>
               ) : (

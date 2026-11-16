@@ -89,16 +89,32 @@ const SCHEMA = [
      id INTEGER PRIMARY KEY AUTOINCREMENT, conversation_id INTEGER NOT NULL, sender_id INTEGER NOT NULL,
      kind TEXT NOT NULL DEFAULT 'text', body TEXT NOT NULL, created_at TEXT NOT NULL)`,
   `CREATE INDEX IF NOT EXISTS idx_messages_conv ON messages(conversation_id, id)`,
+  `CREATE INDEX IF NOT EXISTS idx_reports_date ON reports(date)`,
+];
+// Columns added after the first release (ALTER TABLE has no IF NOT EXISTS).
+const SCHEMA_ADDITIONS = [
+  // Messages written by an admin have sender_id = 0 and the admin's username here.
+  `ALTER TABLE messages ADD COLUMN sender_admin TEXT`,
 ];
 
 let schemaReady = null;
 function ensureSchema(env) {
   if (!env.DB) throw new HttpError(500, "Server not configured (DB binding missing)");
   if (!schemaReady) {
-    schemaReady = env.DB.batch(SCHEMA.map((s) => env.DB.prepare(s))).catch((e) => {
-      schemaReady = null;
-      throw e;
-    });
+    schemaReady = env.DB.batch(SCHEMA.map((s) => env.DB.prepare(s)))
+      .then(async () => {
+        for (const sql of SCHEMA_ADDITIONS) {
+          await env.DB.prepare(sql)
+            .run()
+            .catch((e) => {
+              if (!/duplicate column/i.test(String(e.message))) throw e;
+            });
+        }
+      })
+      .catch((e) => {
+        schemaReady = null;
+        throw e;
+      });
   }
   return schemaReady;
 }
@@ -245,6 +261,16 @@ function broadcast(env, ctx, to, event) {
   if (ctx && ctx.waitUntil) ctx.waitUntil(p);
 }
 
+/** Different events to different interns in one hub round-trip: [{ to, event }]. */
+function broadcastMany(env, ctx, items) {
+  const h = hub(env);
+  if (!h || !items.length) return;
+  const p = h
+    .fetch("https://hub/broadcast", { method: "POST", body: JSON.stringify({ items }) })
+    .catch(() => {});
+  if (ctx && ctx.waitUntil) ctx.waitUntil(p);
+}
+
 async function onlineIds(env) {
   const h = hub(env);
   if (!h) return [];
@@ -326,6 +352,85 @@ async function postMessage(env, ctx, intern, c, kind, body) {
   };
   broadcast(env, ctx, await conversationRecipients(env, c), { type: "message", message });
   return message;
+}
+
+/* ---------------- Admin ↔ intern conversations ----------------
+ * Each intern has one private conversation (type 'admin', dm_key 'admin:<id>')
+ * with the IVIS LABS team. Admin messages are stored with sender_id = 0 and the
+ * admin's username in sender_admin. Admin read state is shared by all admins
+ * and kept in conv_reads with intern_id = 0.
+ */
+const ADMIN_CONV_NAME = "IVIS LABS Team";
+const adminConvKey = (internId) => `admin:${internId}`;
+const ADMIN_UID = 0;
+
+function adminSenderName(username) {
+  const u = String(username || "admin");
+  return `${u.charAt(0).toUpperCase()}${u.slice(1)} (IVIS LABS)`;
+}
+
+function withSenderNames(rows) {
+  return rows.map((r) => (r.sender_id === ADMIN_UID ? { ...r, sender_name: adminSenderName(r.sender_admin) } : r));
+}
+
+function ensureAdminConvStmts(env, internId, created) {
+  const k = adminConvKey(internId);
+  return [
+    env.DB.prepare("INSERT OR IGNORE INTO conversations (type, name, dm_key, created_at) VALUES ('admin', ?, ?, ?)").bind(
+      ADMIN_CONV_NAME,
+      k,
+      created
+    ),
+    env.DB.prepare("INSERT OR IGNORE INTO conv_members (conversation_id, intern_id) SELECT id, ? FROM conversations WHERE dm_key = ?").bind(
+      internId,
+      k
+    ),
+  ];
+}
+
+/** Post the same admin message into each intern's private admin conversation. */
+async function adminSend(env, ctx, admin, internIds, kind, body) {
+  const created = nowISO();
+  const events = [];
+  const PER_BATCH = 20; // 4 statements each
+  for (let i = 0; i < internIds.length; i += PER_BATCH) {
+    const chunk = internIds.slice(i, i + PER_BATCH);
+    const stmts = [];
+    for (const id of chunk) {
+      const k = adminConvKey(id);
+      stmts.push(
+        ...ensureAdminConvStmts(env, id, created),
+        env.DB.prepare(
+          `INSERT INTO messages (conversation_id, sender_id, sender_admin, kind, body, created_at)
+           SELECT id, 0, ?, ?, ?, ? FROM conversations WHERE dm_key = ? RETURNING id, conversation_id`
+        ).bind(admin, kind, body, created, k),
+        env.DB.prepare("UPDATE conversations SET last_message_at = ? WHERE dm_key = ?").bind(created, k)
+      );
+    }
+    const res = await env.DB.batch(stmts);
+    chunk.forEach((id, j) => {
+      const row = res[j * 4 + 2].results && res[j * 4 + 2].results[0];
+      if (!row) return;
+      events.push({
+        to: [id],
+        event: {
+          type: "message",
+          message: {
+            id: row.id,
+            conversation_id: row.conversation_id,
+            sender_id: ADMIN_UID,
+            sender_admin: admin,
+            sender_name: adminSenderName(admin),
+            kind,
+            body,
+            created_at: created,
+          },
+        },
+      });
+    });
+  }
+  broadcastMany(env, ctx, events);
+  return events.map((e) => e.event.message);
 }
 
 /* ------------------------------------------------------------------ */
@@ -594,6 +699,8 @@ route("GET", "/api/chat/ws", async ({ request, env, url }) => {
 
 route("GET", "/api/chat/bootstrap", async ({ request, env }) => {
   const me = await requireIntern(request, env);
+  // Every intern has a private line to the IVIS LABS team.
+  await env.DB.batch(ensureAdminConvStmts(env, me.id, nowISO()));
   const [contacts, online] = await Promise.all([batchmates(env, me), onlineIds(env)]);
   const convs = (
     await env.DB.prepare(
@@ -672,22 +779,27 @@ route("POST", "/api/chat/conversations", async ({ request, env, ctx }) => {
 route("GET", "/api/chat/conversations/:id/messages", async ({ request, env, params, url }) => {
   const me = await requireIntern(request, env);
   const c = await getConversation(env, me, Number(params.id));
+  return json({ ok: true, ...(await pageMessages(env, c.id, url)) }, 200, request);
+});
+
+/** Messages of one conversation: newest 50, older (?before=id) or newer (?after=id). */
+async function pageMessages(env, convId, url) {
   const after = Number(url.searchParams.get("after") || 0);
   const before = Number(url.searchParams.get("before") || 0);
-  const base = `SELECT m.*, i.full_name AS sender_name FROM messages m JOIN interns i ON i.id = m.sender_id
+  const base = `SELECT m.*, i.full_name AS sender_name FROM messages m LEFT JOIN interns i ON i.id = m.sender_id
                  WHERE m.conversation_id = ?`;
   let rows;
   if (after) {
-    rows = (await env.DB.prepare(`${base} AND m.id > ? ORDER BY m.id LIMIT 200`).bind(c.id, after).all()).results;
+    rows = (await env.DB.prepare(`${base} AND m.id > ? ORDER BY m.id LIMIT 200`).bind(convId, after).all()).results;
   } else {
     rows = (
       await env.DB.prepare(`${base} ${before ? "AND m.id < ?" : ""} ORDER BY m.id DESC LIMIT 50`)
-        .bind(...(before ? [c.id, before] : [c.id]))
+        .bind(...(before ? [convId, before] : [convId]))
         .all()
     ).results.reverse();
   }
-  return json({ ok: true, messages: rows, hasMore: !after && rows.length === 50 }, 200, request);
-});
+  return { messages: withSenderNames(rows), hasMore: !after && rows.length === 50 };
+}
 
 route("POST", "/api/chat/conversations/:id/messages", async ({ request, env, ctx, params }) => {
   const me = await requireIntern(request, env);
@@ -886,6 +998,147 @@ route("PUT", "/api/admin/reports/:id/comment", async ({ request, env, params }) 
     .first();
   if (!row) throw new HttpError(404, "Report not found");
   return json({ ok: true, report: serializeReport(row) }, 200, request);
+});
+
+/* ---------------- Admin: everyone's daily reports ---------------- */
+
+const REPORT_COLS = `r.*, i.full_name, i.intern_code, i.batch_id, b.name AS batch_name,
+                     i.photo_key IS NOT NULL AS has_photo, i.photo_updated_at`;
+
+// ?date=YYYY-MM-DD[&batch_id=] → that day's reports + approved interns who haven't filed.
+// ?from=&to=[&batch_id=]       → every report in the range (max 1 year), for export.
+route("GET", "/api/admin/reports", async ({ request, env, url }) => {
+  await requireAdmin(request, env);
+  const batchId = Number(url.searchParams.get("batch_id") || 0);
+  const bWhere = batchId ? "AND i.batch_id = ?" : "";
+  const bArgs = batchId ? [batchId] : [];
+  const from = url.searchParams.get("from");
+  const to = url.searchParams.get("to");
+  if (from || to) {
+    if (!isISODate(from) || !isISODate(to) || to < from) throw new HttpError(400, "Invalid date range");
+    if (to > addDays(from, 366)) throw new HttpError(400, "Range can be at most one year");
+    const rows = (
+      await env.DB.prepare(
+        `SELECT ${REPORT_COLS} FROM reports r JOIN interns i ON i.id = r.intern_id LEFT JOIN batches b ON b.id = i.batch_id
+          WHERE r.date BETWEEN ? AND ? ${bWhere} ORDER BY r.date, i.full_name`
+      )
+        .bind(from, to, ...bArgs)
+        .all()
+    ).results;
+    return json({ ok: true, reports: rows.map(serializeReport) }, 200, request);
+  }
+  const date = url.searchParams.get("date") || todayIST();
+  if (!isISODate(date)) throw new HttpError(400, "Invalid date");
+  const [reports, missing] = await Promise.all([
+    env.DB.prepare(
+      `SELECT ${REPORT_COLS} FROM reports r JOIN interns i ON i.id = r.intern_id LEFT JOIN batches b ON b.id = i.batch_id
+        WHERE r.date = ? ${bWhere} ORDER BY i.full_name`
+    )
+      .bind(date, ...bArgs)
+      .all(),
+    env.DB.prepare(
+      `SELECT i.id, i.full_name, i.intern_code, i.batch_id, b.name AS batch_name,
+              i.photo_key IS NOT NULL AS has_photo, i.photo_updated_at
+         FROM interns i LEFT JOIN batches b ON b.id = i.batch_id
+        WHERE i.status = 'approved' AND i.start_date <= ?1 AND (i.end_date IS NULL OR i.end_date >= ?1) ${bWhere.replace("?", "?2")}
+          AND NOT EXISTS (SELECT 1 FROM reports r WHERE r.intern_id = i.id AND r.date = ?1)
+        ORDER BY i.full_name`
+    )
+      .bind(date, ...bArgs)
+      .all(),
+  ]);
+  return json(
+    { ok: true, date, today: todayIST(), reports: reports.results.map(serializeReport), missing: missing.results },
+    200,
+    request
+  );
+});
+
+/* ---------------- Admin: messages to interns ---------------- */
+
+route("GET", "/api/admin/chat/inbox", async ({ request, env }) => {
+  await requireAdmin(request, env);
+  const rows = (
+    await env.DB.prepare(
+      `SELECT c.id, c.last_message_at, i.id AS intern_id, i.full_name, i.intern_code, i.status,
+              b.name AS batch_name, i.photo_key IS NOT NULL AS has_photo, i.photo_updated_at,
+              (SELECT COUNT(*) FROM messages m
+                 WHERE m.conversation_id = c.id AND m.id > COALESCE(r.last_read_id, 0) AND m.sender_id <> 0) AS unread,
+              (SELECT json_object('id', m.id, 'body', m.body, 'kind', m.kind, 'sender_id', m.sender_id,
+                                  'sender_admin', m.sender_admin, 'created_at', m.created_at)
+                 FROM messages m WHERE m.conversation_id = c.id ORDER BY m.id DESC LIMIT 1) AS last_message
+         FROM conversations c
+         JOIN conv_members cm ON cm.conversation_id = c.id
+         JOIN interns i ON i.id = cm.intern_id
+         LEFT JOIN batches b ON b.id = i.batch_id
+         LEFT JOIN conv_reads r ON r.conversation_id = c.id AND r.intern_id = 0
+        WHERE c.type = 'admin' AND c.last_message_at IS NOT NULL
+        ORDER BY c.last_message_at DESC`
+    ).all()
+  ).results;
+  // Threads waiting for a reply first (a broadcast would otherwise bury them).
+  const threads = rows
+    .map((r) => ({ ...r, last_message: r.last_message ? JSON.parse(r.last_message) : null }))
+    .sort((x, y) => (y.unread > 0) - (x.unread > 0));
+  return json({ ok: true, threads, unread: threads.reduce((n, t) => n + t.unread, 0) }, 200, request);
+});
+
+async function adminConvFor(env, internId) {
+  return env.DB.prepare("SELECT * FROM conversations WHERE dm_key = ?").bind(adminConvKey(internId)).first();
+}
+
+route("GET", "/api/admin/chat/:internId/messages", async ({ request, env, params, url }) => {
+  await requireAdmin(request, env);
+  const c = await adminConvFor(env, Number(params.internId));
+  if (!c) return json({ ok: true, messages: [], hasMore: false }, 200, request);
+  return json({ ok: true, ...(await pageMessages(env, c.id, url)) }, 200, request);
+});
+
+route("POST", "/api/admin/chat/:internId/read", async ({ request, env, params }) => {
+  await requireAdmin(request, env);
+  const c = await adminConvFor(env, Number(params.internId));
+  const lastId = Number((await readJson(request)).lastId || 0);
+  if (c && lastId) {
+    await env.DB.prepare(
+      `INSERT INTO conv_reads (conversation_id, intern_id, last_read_id) VALUES (?, 0, ?)
+       ON CONFLICT(conversation_id, intern_id) DO UPDATE SET last_read_id = MAX(last_read_id, excluded.last_read_id)`
+    )
+      .bind(c.id, lastId)
+      .run();
+  }
+  return json({ ok: true }, 200, request);
+});
+
+// { to: "all" | "batch" | "selected", batch_id?, ids?, body, kind?: "text" | "ping" }
+// Each recipient gets the message in their private chat with the IVIS LABS team.
+route("POST", "/api/admin/chat/send", async ({ request, env, ctx }) => {
+  const admin = await requireAdmin(request, env);
+  const b = await readJson(request);
+  const kind = b.kind === "ping" ? "ping" : "text";
+  const text = String(b.body || "").trim();
+  if (kind === "text" && !text) throw new HttpError(400, "Message is empty");
+  if (text.length > 4000) throw new HttpError(400, "Message is too long (max 4000 characters)");
+  let q;
+  if (b.to === "all") {
+    q = env.DB.prepare("SELECT id FROM interns WHERE status = 'approved'");
+  } else if (b.to === "batch") {
+    const batchId = Number(b.batch_id);
+    if (!batchId) throw new HttpError(400, "Choose a batch");
+    q = env.DB.prepare("SELECT id FROM interns WHERE status = 'approved' AND batch_id = ?").bind(batchId);
+  } else if (b.to === "selected") {
+    const ids = [...new Set((Array.isArray(b.ids) ? b.ids : []).map(Number).filter((n) => n > 0))];
+    if (!ids.length) throw new HttpError(400, "Pick at least one intern");
+    q = env.DB.prepare(
+      "SELECT id FROM interns WHERE status = 'approved' AND id IN (SELECT value FROM json_each(?))"
+    ).bind(JSON.stringify(ids));
+  } else {
+    throw new HttpError(400, "Choose who to send to");
+  }
+  const targets = (await q.all()).results.map((r) => r.id);
+  if (!targets.length) throw new HttpError(400, "No active interns match these recipients");
+  if (targets.length > 1000) throw new HttpError(400, "Too many recipients at once");
+  const messages = await adminSend(env, ctx, admin, targets, kind, kind === "ping" ? "" : text);
+  return json({ ok: true, sent: messages.length, messages }, 201, request);
 });
 
 /* ------------------------------------------------------------------ */

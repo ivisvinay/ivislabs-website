@@ -263,6 +263,40 @@ export function downloadIdCardPdf({ front, back }, filename) {
   doc.save(filename);
 }
 
+/**
+ * Many cards in one PDF for printing: A4 portrait sheets, cards at actual
+ * CR80 size in a 3×3 grid; each fronts page is followed by its backs page,
+ * mirrored left↔right so double-sided printing lines up.
+ */
+export function downloadIdCardsSheetPdf(cardsList, filename) {
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
+  const COLS = 3;
+  const ROWS = 3;
+  const GAP = 6;
+  const left = (210 - (COLS * W_MM + (COLS - 1) * GAP)) / 2;
+  const top = (297 - (ROWS * H_MM + (ROWS - 1) * GAP)) / 2;
+  const place = (side, i, mirror) => {
+    const col = i % COLS;
+    const row = Math.floor(i / COLS);
+    const c = mirror ? COLS - 1 - col : col;
+    const x = left + c * (W_MM + GAP);
+    const y = top + row * (H_MM + GAP);
+    doc.addImage(side.toDataURL("image/jpeg", 0.9), "JPEG", x, y, W_MM, H_MM);
+    doc.setDrawColor(200);
+    doc.setLineWidth(0.1);
+    doc.rect(x, y, W_MM, H_MM);
+  };
+  const perPage = COLS * ROWS;
+  for (let p = 0; p < cardsList.length; p += perPage) {
+    const chunk = cardsList.slice(p, p + perPage);
+    if (p > 0) doc.addPage("a4", "portrait");
+    chunk.forEach((cards, i) => place(cards.front, i, false));
+    doc.addPage("a4", "portrait");
+    chunk.forEach((cards, i) => place(cards.back, i, true));
+  }
+  doc.save(filename);
+}
+
 export function downloadCanvasPng(canvas, filename) {
   const a = document.createElement("a");
   a.href = canvas.toDataURL("image/png");

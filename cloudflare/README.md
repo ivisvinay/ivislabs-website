@@ -87,6 +87,19 @@ using `SESSION_SECRET`; changing that secret signs everyone out.
    opens `…/intern-id/<random token>`, a public page confirming the intern and
    whether the card is active, expired or revoked.
 
+Admin tabs under `/admin` → **Interns**:
+
+- **Interns** – registrations, approval, schedule, account actions, per-intern calendar.
+- **Daily reports** – everyone's report for a chosen day (filter by batch), who hasn't
+  reported yet with a one-click reminder, inline comments, CSV export for a date range.
+- **ID cards** – card previews for all approved interns; open one to see both sides and
+  download PDF/PNG, or download an A4 print sheet (9 per page, backs mirrored for
+  double-sided printing). Interns without a photo are listed with a reminder button.
+- **Messages** – every intern has a private **IVIS LABS Team** chat. Admins can reply
+  there, or send one message (or ping) to selected interns, a whole batch, or everyone;
+  each copy lands in the recipient's own private chat and arrives live. Admin messages
+  are stored with `sender_id = 0` and the admin's username in `sender_admin`.
+
 Data: D1 tables `interns`, `batches`, `reports`, `conversations`, `conv_members`,
 `conv_reads`, `messages` (created automatically by the Worker).
 

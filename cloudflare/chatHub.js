@@ -8,7 +8,7 @@
  *
  * Internal endpoints (only reachable from the Worker via the CHAT binding):
  *   GET  /connect?uid=<id>   upgrade to a WebSocket for that intern
- *   POST /broadcast          { to: [ids], event: {...} }
+ *   POST /broadcast          { to: [ids], event } or { items: [{ to, event }] }
  *   GET  /online             -> [ids currently connected]
  */
 export class ChatHub {
@@ -72,8 +72,9 @@ export class ChatHub {
     }
 
     if (url.pathname === "/broadcast" && request.method === "POST") {
-      const { to, event } = await request.json();
-      this.sendTo(to || [], event);
+      const { to, event, items } = await request.json();
+      if (Array.isArray(items)) for (const it of items) this.sendTo(it.to || [], it.event);
+      else this.sendTo(to || [], event);
       return new Response("ok");
     }
 

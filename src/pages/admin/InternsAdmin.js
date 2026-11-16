@@ -1,9 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { api, authImageUrl, internVerifyUrl } from "../../services/internApi";
 import { DURATIONS, durationMonths, specLabel } from "../../config/internOptions";
-import { endDateFor, expectedReportDays, fmtDate } from "../../utils/internDates";
+import { endDateFor, expectedReportDays, fmtDate, todayIST } from "../../utils/internDates";
 import { renderIdCard, downloadIdCardPdf } from "../../utils/internIdCard";
 import ReportCalendar from "../interns/ReportCalendar";
+import AdminReports from "./AdminReports";
+import AdminIdCards from "./AdminIdCards";
+import AdminMessages from "./AdminMessages";
 import { Alert, Avatar, Button, Card, Field, Select, StatusBadge, inputCls } from "../interns/ui";
 
 const FILTERS = [
@@ -14,10 +17,24 @@ const FILTERS = [
   { key: "all", label: "All" },
 ];
 
-/** Admin › Interns: approve registrations, manage batches and schedules, review reports. */
+const VIEWS = [
+  { key: "list", label: "Interns" },
+  { key: "reports", label: "Daily reports" },
+  { key: "cards", label: "ID cards" },
+  { key: "messages", label: "Messages" },
+];
+
+/**
+ * Admin › Interns: approve registrations, manage batches and schedules, review
+ * everyone's daily reports, view ID cards, and message interns.
+ */
 export default function InternsAdmin({ token, onAuthError }) {
   const [interns, setInterns] = useState(null);
-  const [today, setToday] = useState("");
+  const [today, setToday] = useState(todayIST());
+  const [view, setView] = useState("list");
+  const [inbox, setInbox] = useState(null);
+  const [draft, setDraft] = useState(null); // { ids, text, nonce } prefilled compose
+  const [chatWith, setChatWith] = useState(null);
   const [batches, setBatches] = useState([]);
   const [filter, setFilter] = useState("pending");
   const [search, setSearch] = useState("");
@@ -52,6 +69,34 @@ export default function InternsAdmin({ token, onAuthError }) {
     load();
   }, [load]);
 
+  const refreshInbox = useCallback(() => {
+    call("/api/admin/chat/inbox")
+      .then(setInbox)
+      .catch(() => {});
+  }, [call]);
+  useEffect(() => {
+    refreshInbox();
+    const t = setInterval(refreshInbox, 30000);
+    return () => clearInterval(t);
+  }, [refreshInbox]);
+
+  const openIntern = (id) => {
+    setSelectedId(id);
+    setView("list");
+    window.scrollTo(0, 0);
+  };
+  const messageInterns = (ids, text = "") => {
+    setDraft({ ids, text, nonce: Date.now() });
+    setChatWith(null);
+    setSelectedId(null);
+    setView("messages");
+  };
+  const chatWithIntern = (id) => {
+    setChatWith(id);
+    setSelectedId(null);
+    setView("messages");
+  };
+
   const counts = useMemo(() => {
     const c = { all: (interns || []).length };
     for (const i of interns || []) c[i.status] = (c[i.status] || 0) + 1;
@@ -71,84 +116,141 @@ export default function InternsAdmin({ token, onAuthError }) {
     call("/api/admin/batches").then((b) => setBatches(b.batches)).catch(() => {});
   };
 
-  if (selected) {
-    return (
-      <InternDetail
-        key={selected.id}
-        intern={selected}
-        today={today}
-        batches={batches}
-        call={call}
-        token={token}
-        onBack={() => {
-          setSelectedId(null);
-          load();
-        }}
-        onUpdated={onUpdated}
-        onBatchCreated={(b) => setBatches((l) => [b, ...l])}
-      />
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      <div className="grid md:grid-cols-3 gap-6">
-        <div className="md:col-span-2 space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
-            {FILTERS.map((f) => (
-              <button
-                key={f.key}
-                onClick={() => setFilter(f.key)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition ${
-                  filter === f.key ? "bg-blue-600 text-white border-blue-600" : "bg-white text-slate-700 border-slate-200 hover:border-blue-300"
-                }`}
-              >
-                {f.label}
-                {counts[f.key] ? <span className="ml-1.5 opacity-75">{counts[f.key]}</span> : null}
-              </button>
-            ))}
-            <input className={`${inputCls} sm:w-56 sm:ml-auto`} placeholder="Search name, email, college…" value={search} onChange={(e) => setSearch(e.target.value)} />
-          </div>
-          {error && <Alert>{error}</Alert>}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 divide-y divide-slate-100">
-            {!interns && <div className="p-5 text-sm text-slate-500">Loading…</div>}
-            {interns && !shown.length && <div className="p-5 text-sm text-slate-500">No interns here.</div>}
-            {shown.map((i) => {
-              const expected = i.status === "approved" ? expectedReportDays(i.start_date, i.end_date, today).length : 0;
-              return (
-                <button key={i.id} onClick={() => setSelectedId(i.id)} className="w-full text-left px-4 py-3 hover:bg-slate-50 flex items-center gap-3">
-                  <Avatar id={i.id} name={i.full_name} hasPhoto={i.has_photo} photoPath={`/api/admin/interns/${i.id}/photo`} token={token} version={i.photo_updated_at} size={40} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-slate-900 truncate">{i.full_name}</span>
-                      <StatusBadge status={i.status} />
-                    </div>
-                    <div className="text-xs text-slate-500 truncate">
-                      {i.degree} · {specLabel(i)} · {i.college}
-                    </div>
-                    <div className="text-xs text-slate-400 truncate">
-                      {i.status === "pending"
-                        ? `${i.duration_label} · wants to start ${fmtDate(i.preferred_start)} · registered ${fmtDate(i.created_at.slice(0, 10))}`
-                        : `${i.intern_code || ""} · ${i.batch_name || "no batch"} · ${fmtDate(i.start_date)} – ${fmtDate(i.end_date)}`}
-                    </div>
-                  </div>
-                  {i.status === "approved" && (
-                    <div className="text-right shrink-0">
-                      <div className={`text-sm font-semibold ${i.report_count < expected ? "text-red-600" : "text-green-700"}`}>
-                        {i.report_count}/{expected}
-                      </div>
-                      <div className="text-[10px] text-slate-400">reports</div>
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-        <BatchesCard batches={batches} call={call} onCreated={(b) => setBatches((l) => [b, ...l])} />
-      </div>
+  const nav = (
+    <div className="flex gap-1 border-b border-slate-200 overflow-x-auto">
+      {VIEWS.map((v) => (
+        <button
+          key={v.key}
+          onClick={() => {
+            setView(v.key);
+            if (v.key === "list") setSelectedId(null);
+            if (v.key === "messages") {
+              setDraft(null);
+              setChatWith(null);
+            }
+          }}
+          className={`px-3 sm:px-4 py-2 text-sm font-medium border-b-2 transition whitespace-nowrap ${
+            view === v.key ? "border-blue-600 text-blue-700" : "border-transparent text-slate-500 hover:text-slate-800"
+          }`}
+        >
+          {v.label}
+          {v.key === "list" && counts.pending ? <span className="ml-1.5 bg-amber-400 text-slate-900 text-[10px] font-bold rounded-full px-1.5 py-0.5">{counts.pending}</span> : null}
+          {v.key === "messages" && inbox && inbox.unread ? <span className="ml-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full px-1.5 py-0.5">{inbox.unread}</span> : null}
+        </button>
+      ))}
     </div>
   );
+
+  let body;
+  if (view === "reports") {
+    body = <AdminReports call={call} token={token} batches={batches} today={today} onOpenIntern={openIntern} onMessage={messageInterns} />;
+  } else if (view === "cards") {
+    body = <AdminIdCards interns={interns} batches={batches} token={token} onOpenIntern={openIntern} onMessage={messageInterns} />;
+  } else if (view === "messages") {
+    body = (
+      <AdminMessages
+        call={call}
+        token={token}
+        interns={interns}
+        batches={batches}
+        inbox={inbox}
+        refreshInbox={refreshInbox}
+        draft={draft}
+        openInternId={chatWith}
+        onOpenIntern={openIntern}
+      />
+    );
+  } else {
+    body = renderList();
+  }
+  return (
+    <div className="space-y-6">
+      {nav}
+      {body}
+    </div>
+  );
+
+  function renderList() {
+    if (selected) {
+      return (
+        <InternDetail
+          key={selected.id}
+          intern={selected}
+          today={today}
+          batches={batches}
+          call={call}
+          token={token}
+          onBack={() => {
+            setSelectedId(null);
+            load();
+          }}
+          onUpdated={onUpdated}
+          onBatchCreated={(b) => setBatches((l) => [b, ...l])}
+          onMessage={() => chatWithIntern(selected.id)}
+        />
+      );
+    }
+
+    return (
+      <div className="space-y-6">
+        <div className="grid md:grid-cols-3 gap-6">
+          <div className="md:col-span-2 space-y-4">
+            <div className="flex flex-wrap items-center gap-2">
+              {FILTERS.map((f) => (
+                <button
+                  key={f.key}
+                  onClick={() => setFilter(f.key)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition ${
+                    filter === f.key ? "bg-blue-600 text-white border-blue-600" : "bg-white text-slate-700 border-slate-200 hover:border-blue-300"
+                  }`}
+                >
+                  {f.label}
+                  {counts[f.key] ? <span className="ml-1.5 opacity-75">{counts[f.key]}</span> : null}
+                </button>
+              ))}
+              <input className={`${inputCls} sm:w-56 sm:ml-auto`} placeholder="Search name, email, college…" value={search} onChange={(e) => setSearch(e.target.value)} />
+            </div>
+            {error && <Alert>{error}</Alert>}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 divide-y divide-slate-100">
+              {!interns && <div className="p-5 text-sm text-slate-500">Loading…</div>}
+              {interns && !shown.length && <div className="p-5 text-sm text-slate-500">No interns here.</div>}
+              {shown.map((i) => {
+                const expected = i.status === "approved" ? expectedReportDays(i.start_date, i.end_date, today).length : 0;
+                return (
+                  <button key={i.id} onClick={() => setSelectedId(i.id)} className="w-full text-left px-4 py-3 hover:bg-slate-50 flex items-center gap-3">
+                    <Avatar id={i.id} name={i.full_name} hasPhoto={i.has_photo} photoPath={`/api/admin/interns/${i.id}/photo`} token={token} version={i.photo_updated_at} size={40} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-slate-900 truncate">{i.full_name}</span>
+                        <StatusBadge status={i.status} />
+                      </div>
+                      <div className="text-xs text-slate-500 truncate">
+                        {i.degree} · {specLabel(i)} · {i.college}
+                      </div>
+                      <div className="text-xs text-slate-400 truncate">
+                        {i.status === "pending"
+                          ? `${i.duration_label} · wants to start ${fmtDate(i.preferred_start)} · registered ${fmtDate(i.created_at.slice(0, 10))}`
+                          : `${i.intern_code || ""} · ${i.batch_name || "no batch"} · ${fmtDate(i.start_date)} – ${fmtDate(i.end_date)}`}
+                      </div>
+                    </div>
+                    {i.status === "approved" && (
+                      <div className="text-right shrink-0">
+                        <div className={`text-sm font-semibold ${i.report_count < expected ? "text-red-600" : "text-green-700"}`}>
+                          {i.report_count}/{expected}
+                        </div>
+                        <div className="text-[10px] text-slate-400">reports</div>
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <BatchesCard batches={batches} call={call} onCreated={(b) => setBatches((l) => [b, ...l])} />
+        </div>
+      </div>
+    );
+  }
 }
 
 function BatchesCard({ batches, call, onCreated }) {
@@ -186,7 +288,7 @@ function BatchesCard({ batches, call, onCreated }) {
   );
 }
 
-function InternDetail({ intern, today, batches, call, token, onBack, onUpdated, onBatchCreated }) {
+function InternDetail({ intern, today, batches, call, token, onBack, onUpdated, onBatchCreated, onMessage }) {
   const [reports, setReports] = useState(null);
   const [msg, setMsg] = useState({});
   const [busy, setBusy] = useState(false);
@@ -394,6 +496,11 @@ function InternDetail({ intern, today, batches, call, token, onBack, onUpdated, 
                 ) : (
                   <Button onClick={() => setStatus("approved")} disabled={busy}>
                     Re-activate
+                  </Button>
+                )}
+                {intern.status === "approved" && (
+                  <Button variant="light" onClick={onMessage} disabled={busy}>
+                    ✉ Message
                   </Button>
                 )}
                 <Button variant="light" onClick={resetPassword} disabled={busy}>

@@ -59,6 +59,7 @@ function desktopNotify(title, body, tag) {
 export function conversationTitle(c, meId) {
   if (!c) return "";
   if (c.type === "batch") return `${c.name} · Batch chat`;
+  if (c.type === "admin") return "IVIS LABS Team";
   if (c.type === "dm") {
     const other = (c.members || []).find((m) => m.id !== meId);
     return other ? other.full_name : "Direct message";
@@ -149,7 +150,7 @@ export default function useChat(token, meId) {
       const viewing = activeRef.current === m.conversation_id && !document.hidden;
       if (viewing) markRead(m.conversation_id, m.id);
       const conv = convsRef.current.find((c) => c.id === m.conversation_id);
-      const where = conv && conv.type !== "dm" ? ` in ${conv.name}` : "";
+      const where = conv && (conv.type === "batch" || conv.type === "group") ? ` in ${conv.name}` : "";
       if (m.kind === "ping") {
         playPing();
         if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
