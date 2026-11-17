@@ -43,3 +43,13 @@ export const GENDERS = ["Male", "Female", "Other", "Prefer not to say"];
 
 export const specLabel = (i) =>
   i.specialization === "Others" ? i.specialization_other || "Others" : i.specialization;
+
+// Shown on the registration page. Fees in INR by duration; durations without a
+// listed fee are shown without a price.
+export const PROGRAMMES = [
+  { key: "ai-python", title: "AI with Python", tags: ["Python", "Machine learning", "Data analysis"], accent: "teal" },
+  { key: "fullstack", title: "AI Powered Full Stack Development", sub: "using Python", tags: ["Frontend", "Backend", "Databases", "APIs"], accent: "teal" },
+  { key: "business", title: "AI Powered Digital Marketing, Accounting, Finance & more", tags: ["SEO & Ads", "Bookkeeping", "GST", "Finance"], accent: "amber" },
+];
+export const FEES = { "1m": 2500, "3m": 5900, "4m": 9400 };
+export const fmtINR = (n) => `₹${n.toLocaleString("en-IN")}/-`;

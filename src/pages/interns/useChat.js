@@ -72,7 +72,9 @@ export function conversationTitle(c, meId) {
  * every tab). Real-time via WebSocket; falls back to polling while disconnected
  * and re-syncs missed messages after a reconnect.
  */
-export default function useChat(token, meId) {
+export default function useChat(token, meId, { onSelfChange } = {}) {
+  const selfChangeRef = useRef(onSelfChange);
+  selfChangeRef.current = onSelfChange;
   const [contacts, setContacts] = useState([]);
   const [online, setOnline] = useState(() => new Set());
   const [conversations, setConversations] = useState([]);
@@ -221,6 +223,11 @@ export default function useChat(token, meId) {
           });
         else if (ev.type === "message") handleIncoming(ev.message);
         else if (ev.type === "conversation") bootstrap();
+        else if (ev.type === "roster") {
+          // An admin approved / moved / suspended someone in this batch.
+          bootstrap();
+          if (ev.changed === meId && selfChangeRef.current) selfChangeRef.current();
+        }
       };
       ws.onclose = () => {
         setConnected(false);

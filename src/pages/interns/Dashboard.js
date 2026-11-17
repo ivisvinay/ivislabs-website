@@ -10,7 +10,9 @@ import { fmtDate } from "../../utils/internDates";
 
 export default function Dashboard({ me, token, onLogout, onRefresh, onTokenChange }) {
   const intern = me.intern;
-  const chat = useChat(token, intern.id);
+  // onRefresh re-reads the profile when an admin changes this intern's batch,
+  // dates or status (pushed live over the chat socket).
+  const chat = useChat(token, intern.id, { onSelfChange: onRefresh });
   const navigate = useNavigate();
 
   // Unread count in the browser tab title.

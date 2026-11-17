@@ -41,6 +41,20 @@ export default function InternPortal() {
     refresh();
   }, [refresh]);
 
+  // Waiting for approval: check every 15 s so the portal opens by itself
+  // once an admin approves (no live socket before approval).
+  const waiting = !!me && me.intern.status !== "approved";
+  useEffect(() => {
+    if (!waiting) return undefined;
+    const t = setInterval(() => !document.hidden && refresh(), 15000);
+    const onVis = () => !document.hidden && refresh();
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      clearInterval(t);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, [waiting, refresh]);
+
   const onLogin = (t) => {
     internToken.set(t);
     setToken(t);

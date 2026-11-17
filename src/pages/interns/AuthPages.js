@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../../services/internApi";
-import { DEGREES, SPECIALIZATIONS, DURATIONS, YEARS_OF_STUDY, GENDERS } from "../../config/internOptions";
+import { DEGREES, SPECIALIZATIONS, DURATIONS, YEARS_OF_STUDY, GENDERS, PROGRAMMES, FEES, fmtINR } from "../../config/internOptions";
 import { Field, Select, Alert, Button, inputCls } from "./ui";
 import { todayIST } from "../../utils/internDates";
 
@@ -92,6 +92,81 @@ const EMPTY = {
   consent: false,
 };
 
+const ACCENT = {
+  teal: { text: "text-teal-300", ring: "ring-teal-300", border: "border-teal-300/60", chip: "border-teal-300/70 text-teal-200" },
+  amber: { text: "text-amber-400", ring: "ring-amber-400", border: "border-amber-400/60", chip: "border-amber-400/70 text-amber-300" },
+};
+
+/** Programmes & fees highlight. Tiles fill "Area of interest"; fee cards pick the duration. */
+function ProgrammeBanner({ domain, duration, onPickProgramme, onPickDuration }) {
+  return (
+    <section className="relative overflow-hidden rounded-2xl bg-[#0b1530] text-white p-5 sm:p-7">
+      <div className="pointer-events-none absolute -top-24 -right-24 w-64 h-64 rounded-full bg-white/5" />
+      <div className="pointer-events-none absolute -top-16 -right-10 w-52 h-52 rounded-full border border-amber-400/40" />
+      <div className="relative">
+        <span className="inline-block text-[10px] sm:text-[11px] font-bold tracking-[0.2em] uppercase text-amber-400 border border-amber-400/70 rounded-full px-3 py-1">
+          Internship programme
+        </span>
+        <h2 className="mt-3 text-2xl sm:text-4xl font-extrabold leading-tight tracking-tight">
+          Choose your <span className="text-amber-400">AI Powered</span> Internship
+        </h2>
+
+        <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-3">
+          {PROGRAMMES.map((p, i) => {
+            const a = ACCENT[p.accent];
+            const picked = domain === p.title;
+            return (
+              <button
+                type="button"
+                key={p.key}
+                onClick={() => onPickProgramme(picked ? "" : p.title)}
+                aria-pressed={picked}
+                className={`flex flex-col items-start text-left rounded-xl border p-4 transition bg-[#15244d] hover:bg-[#1a2c5c] ${picked ? `ring-2 ${a.ring} border-transparent` : "border-white/10"}`}
+              >
+                <div className={`text-2xl font-extrabold ${a.text}`}>{String(i + 1).padStart(2, "0")}</div>
+                <div className="mt-1 font-bold leading-snug">{p.title}</div>
+                {p.sub && <div className="text-sm text-slate-300">{p.sub}</div>}
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {p.tags.map((t) => (
+                    <span key={t} className="text-[11px] rounded-full border border-white/20 text-slate-200 px-2 py-0.5">
+                      {t}
+                    </span>
+                  ))}
+                  <span className={`text-[11px] rounded-full border px-2 py-0.5 ${a.chip}`}>AI tools</span>
+                </div>
+                <div className={`mt-auto pt-3 text-xs font-semibold ${picked ? a.text : "text-slate-400"}`}>{picked ? "✓ Selected" : "Tap to choose"}</div>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="mt-5 text-xs font-semibold tracking-[0.15em] uppercase text-slate-300">Internship fee</div>
+        <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
+          {Object.entries(FEES).map(([d, fee]) => {
+            const picked = duration === d;
+            const label = DURATIONS.find((x) => x.value === d).label;
+            return (
+              <button
+                type="button"
+                key={d}
+                onClick={() => onPickDuration(d)}
+                aria-pressed={picked}
+                className={`rounded-xl px-4 py-2.5 sm:py-3 flex sm:block items-center justify-between sm:text-center transition ${picked ? "bg-amber-400 text-[#0b1530]" : "bg-white/5 hover:bg-white/10 border border-amber-400/40"}`}
+              >
+                <div className={`text-xs font-semibold uppercase tracking-wide ${picked ? "text-[#0b1530]/80" : "text-slate-300"}`}>{label}</div>
+                <div className={`text-2xl sm:text-3xl font-extrabold leading-tight ${picked ? "" : "text-amber-400"}`}>{fmtINR(fee)}</div>
+              </button>
+            );
+          })}
+        </div>
+        <p className="mt-3 text-xs text-slate-400">Tap a programme and a duration to fill them in below. Questions? +91 94499 63312 · +91 63644 11444</p>
+      </div>
+    </section>
+  );
+}
+
+const DURATION_OPTIONS = DURATIONS.map((d) => ({ value: d.value, label: FEES[d.value] ? `${d.label} — ${fmtINR(FEES[d.value])}` : d.label }));
+
 function Section({ title, children }) {
   return (
     <fieldset className="border-t border-slate-100 pt-5">
@@ -135,6 +210,8 @@ export function Register({ onLogin }) {
           internship calendar, daily reports, batch chat and ID card.
         </p>
 
+        <ProgrammeBanner domain={f.domain} duration={f.duration} onPickProgramme={set("domain")} onPickDuration={set("duration")} />
+
         <Section title="Personal details">
           <Field label="Full name (as on college ID)" required>{text("full_name", { required: true, maxLength: 120 })}</Field>
           <Field label="Date of birth" required>{text("dob", { type: "date", required: true, max: todayIST() })}</Field>
@@ -172,12 +249,14 @@ export function Register({ onLogin }) {
 
         <Section title="Internship preferences">
           <Field label="Internship duration" required>
-            <Select value={f.duration} onChange={set("duration")} options={DURATIONS} required />
+            <Select value={f.duration} onChange={set("duration")} options={DURATION_OPTIONS} required />
           </Field>
           <Field label="Preferred start date" required hint="Final start date is confirmed by IVIS LABS">
             {text("preferred_start", { type: "date", required: true })}
           </Field>
-          <Field label="Area of interest / domain">{text("domain", { placeholder: "e.g. AI/ML, Web development, HR" })}</Field>
+          <Field label="Programme / area of interest" hint="Pick a programme above or type your own">
+            {text("domain", { placeholder: "e.g. AI with Python", maxLength: 120 })}
+          </Field>
           <Field label="How did you hear about us?">{text("referral")}</Field>
           <Field label="Skills" className="sm:col-span-2">
             <textarea rows={2} className={inputCls} value={f.skills} onChange={set("skills")} placeholder="Python, React, Excel, Communication…" />

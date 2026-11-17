@@ -271,6 +271,25 @@ function broadcastMany(env, ctx, items) {
   if (ctx && ctx.waitUntil) ctx.waitUntil(p);
 }
 
+/**
+ * Tell every approved intern in these batches that membership changed, so open
+ * chat screens re-fetch their batchmates live. `changed` is the intern whose
+ * approval / batch / status changed (their own page refreshes its profile too).
+ */
+async function notifyRoster(env, ctx, batchIds, changed) {
+  const ids = [...new Set(batchIds.filter(Boolean).map(Number))];
+  const to = new Set([changed]);
+  if (ids.length) {
+    const rows = (
+      await env.DB.prepare("SELECT id FROM interns WHERE status = 'approved' AND batch_id IN (SELECT value FROM json_each(?))")
+        .bind(JSON.stringify(ids))
+        .all()
+    ).results;
+    for (const r of rows) to.add(r.id);
+  }
+  broadcast(env, ctx, [...to], { type: "roster", changed });
+}
+
 async function onlineIds(env) {
   const h = hub(env);
   if (!h) return [];
@@ -912,7 +931,7 @@ route("GET", "/api/admin/interns/:id", async ({ request, env, params }) => {
   return json({ ok: true, intern: publicIntern(await adminIntern(env, Number(params.id))) }, 200, request);
 });
 
-route("POST", "/api/admin/interns/:id/approve", async ({ request, env, params }) => {
+route("POST", "/api/admin/interns/:id/approve", async ({ request, env, ctx, params }) => {
   const admin = await requireAdmin(request, env);
   const row = await adminIntern(env, Number(params.id));
   const body = await readJson(request);
@@ -928,10 +947,11 @@ route("POST", "/api/admin/interns/:id/approve", async ({ request, env, params })
   )
     .bind(batchId, start, end, code, randomToken(), nowISO(), admin, body.admin_note || null, nowISO(), row.id)
     .run();
+  await notifyRoster(env, ctx, [row.batch_id, batchId], row.id);
   return json({ ok: true, intern: publicIntern(await adminIntern(env, row.id)) }, 200, request);
 });
 
-route("PATCH", "/api/admin/interns/:id", async ({ request, env, params }) => {
+route("PATCH", "/api/admin/interns/:id", async ({ request, env, ctx, params }) => {
   await requireAdmin(request, env);
   const row = await adminIntern(env, Number(params.id));
   const body = await readJson(request);
@@ -962,6 +982,10 @@ route("PATCH", "/api/admin/interns/:id", async ({ request, env, params }) => {
     await env.DB.prepare(`UPDATE interns SET ${cols.map((c) => `${c} = ?`).join(", ")}, updated_at = ? WHERE id = ?`)
       .bind(...cols.map((c) => set[c]), nowISO(), row.id)
       .run();
+    // Joining/leaving a batch (status or batch change) updates batchmates' chat;
+    // schedule changes only matter to the intern themself.
+    if ("status" in set || "batch_id" in set) await notifyRoster(env, ctx, [row.batch_id, set.batch_id], row.id);
+    else broadcast(env, ctx, [row.id], { type: "roster", changed: row.id });
   }
   return json({ ok: true, intern: publicIntern(await adminIntern(env, row.id)) }, 200, request);
 });
