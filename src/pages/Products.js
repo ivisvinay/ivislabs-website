@@ -41,6 +41,11 @@ const Products = () => {
                     <div className="text-8xl font-bold mb-4 opacity-20">
                       {product.name.split(' ').map(word => word[0]).join('')}
                     </div>
+                    {product.category && (
+                      <span className="mb-2 px-3 py-1 bg-white/10 backdrop-blur-sm rounded-full text-xs font-semibold uppercase tracking-wide text-white/80">
+                        {product.category}
+                      </span>
+                    )}
                     <h3 className="text-3xl font-bold mb-2">{product.name}</h3>
                     <p className="text-xl text-white/80 text-center">{product.tagline}</p>
                     {product.url && (

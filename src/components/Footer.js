@@ -14,22 +14,21 @@ const Footer = () => {
 
   const footerLinks = {
     services: [
-      { name: "Computer Vision", path: "/services#ai-vision" },
-      { name: "Visual Search", path: "/services#visual-search" },
-      { name: "Smart Monitoring", path: "/services#monitoring" },
-      { name: "AR/VR Solutions", path: "/services#ar-vr" },
+      { name: "Manufacturing Intelligence", path: "/services#manufacturing-intelligence" },
+      { name: "Retail Visual AI", path: "/services#retail-visual-ai" },
+      { name: "Computer Vision Services", path: "/services#computer-vision-services" },
+      { name: "AI & CV Consulting", path: "/services#ai-cv-consulting" },
     ],
     products: [
-      { name: "Visual Search Engine", path: "/demo/visual-search" },
-      { name: "Machine Shop Monitor", path: "/demo/machine-monitor" },
-      { name: "Entry-Exit System", path: "/demo/entry-exit" },
-      { name: "Sereno Platform", path: "/demo/sereno" },
+      { name: "Entry-Exit", path: "/products#entry-exit" },
+      { name: "Netted", path: "/products#netted" },
+      { name: "Campus Hiring Platform", path: "/products#campus-hiring-platform" },
+      { name: "OOTA", path: "/products#oota" },
     ],
     edtech: [
-      { name: "PULSE Platform", path: "/edtech" },
-      { name: "CodeIdea", path: "/edtech#codeidea" },
-      { name: "PulseAI", path: "/edtech#pulseai" },
-      { name: "Pulse Academy", path: "/academy" },
+      { name: "PulseAI K-12", path: "https://pulseai.school", external: true },
+      { name: "Pulse Academy", path: "https://academy.pulseai.school", external: true },
+      { name: "Training & Internships", path: "/services#training" },
     ],
     company: [
       { name: "About Us", path: "/about" },
@@ -82,7 +81,10 @@ const Footer = () => {
               </a>
               <div className="flex items-start text-gray-400 text-sm sm:text-base">
                 <FiMapPin className="mr-3 mt-1 flex-shrink-0" />
-                <span>Headquarters: Mysuru, India</span>
+                <span>
+                  113/A First Floor, Temple Road, Jayalakshmipuram, Mysuru
+                  570012
+                </span>
               </div>
             </div>
           </div>
@@ -127,21 +129,35 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* EdTech */}
+          {/* PulseAI / Pulse Academy */}
           <div>
-            <h3 className="font-semibold text-base sm:text-lg mb-4">EdTech</h3>
+            <h3 className="font-semibold text-base sm:text-lg mb-4">
+              PulseAI &amp; Academy
+            </h3>
             <ul className="space-y-2">
-              {footerLinks.edtech.map((link) => (
-                <li key={link.path}>
-                  <Link
-                    to={link.path}
-                    className="text-gray-400 hover:text-white transition-colors inline-flex items-center group text-sm sm:text-base"
-                  >
-                    <span>{link.name}</span>
-                    <FiArrowRight className="ml-1 opacity-0 group-hover:opacity-100 transform group-hover:translate-x-1 transition-all" />
-                  </Link>
-                </li>
-              ))}
+              {footerLinks.edtech.map((link) =>
+                link.external ? (
+                  <li key={link.path}>
+                    <a
+                      href={link.path}
+                      className="text-gray-400 hover:text-white transition-colors inline-flex items-center group text-sm sm:text-base"
+                    >
+                      <span>{link.name}</span>
+                      <FiArrowRight className="ml-1 opacity-0 group-hover:opacity-100 transform group-hover:translate-x-1 transition-all" />
+                    </a>
+                  </li>
+                ) : (
+                  <li key={link.path}>
+                    <Link
+                      to={link.path}
+                      className="text-gray-400 hover:text-white transition-colors inline-flex items-center group text-sm sm:text-base"
+                    >
+                      <span>{link.name}</span>
+                      <FiArrowRight className="ml-1 opacity-0 group-hover:opacity-100 transform group-hover:translate-x-1 transition-all" />
+                    </Link>
+                  </li>
+                )
+              )}
             </ul>
           </div>
 

@@ -29,24 +29,25 @@ const About = () => {
             </h2>
             <div className="space-y-6 text-lg text-gray-700 dark:text-gray-300 leading-relaxed">
               <p>
-                IVIS LABS (Intelligent Vision Labs) was founded by a team of
-                Doctorates in the AI domain with a vision to bridge the gap
-                between cutting-edge AI research and practical enterprise
-                applications.
+                IVIS LABS Private Limited is an AI and computer vision company
+                based in Mysuru, founded in 2021 by Dr. Vinay Kumar
+                Venkataramana, Founder &amp; Managing Director.
               </p>
               <p>
-                Our journey began with pioneering work in Virtual Try-On
-                technology for the fashion retail industry. This early success
-                demonstrated our ability to translate complex Computer Vision
-                algorithms into user-friendly, scalable solutions that deliver
-                real business value.
+                We build and own products across education (PulseAI K-12,
+                Edu-Square OS, FUNgineering, iVis), HR &amp; hiring (Netted,
+                Campus Hiring Platform), security &amp; operations (Entry-Exit),
+                and home robotics (OOTA). Alongside our own products, we deliver
+                custom AI solutions - from manufacturing intelligence and retail
+                visual AI to academy management and university learning
+                platforms - and project-based services spanning computer
+                vision, data annotation, custom software, and hardware
+                prototyping.
               </p>
               <p>
-                Since then, we've expanded our expertise across multiple domains
-                - from visual search systems and industrial IoT monitoring to
-                educational technology platforms. Each solution is built on the
-                same foundation: rigorous research, practical innovation, and a
-                deep understanding of client needs.
+                We also run training programs for students, faculty, schools and
+                companies, and Pulse Academy, our B2C training vertical,
+                including the 3-year Integrated Tech Mastery Program.
               </p>
             </div>
           </div>
@@ -157,11 +158,11 @@ const About = () => {
                 <ul className="space-y-3">
                   {[
                     "Computer Vision & Deep Learning",
-                    "AI-powered Image Recognition",
-                    "Real-time Video Analytics",
-                    "Industrial IoT Solutions",
-                    "AR/VR Applications",
-                    "Natural Language Processing",
+                    "AI Curriculum Design",
+                    "Facial Recognition & Access Control",
+                    "Manufacturing Intelligence (CNC/MTConnect, OEE)",
+                    "Hiring & HR Technology",
+                    "Safety-Critical Robotics",
                   ].map((item, idx) => (
                     <li key={idx} className="flex items-start">
                       <span className="text-blue-600 dark:text-blue-400 mr-2 text-xl">
@@ -180,12 +181,12 @@ const About = () => {
                 </h3>
                 <ul className="space-y-3">
                   {[
-                    "Retail & E-commerce",
-                    "Manufacturing & Industrial",
-                    "Education & Training",
-                    "Logistics & Security",
-                    "Healthcare",
-                    "Enterprise Technology",
+                    "Education (K-12 & Higher Ed)",
+                    "HR & Hiring",
+                    "Manufacturing & Retail",
+                    "Security & Operations",
+                    "Home Robotics",
+                    "Corporate Training",
                   ].map((item, idx) => (
                     <li key={idx} className="flex items-start">
                       <span className="text-blue-600 dark:text-blue-400 mr-2 text-xl">
@@ -198,6 +199,70 @@ const About = () => {
                   ))}
                 </ul>
               </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Academics */}
+      <section className="section-padding bg-gray-50 dark:bg-gray-800">
+        <div className="container-custom">
+          <div className="max-w-4xl mx-auto">
+            <h2 className="text-4xl font-bold font-expletus text-center mb-4 text-gray-900 dark:text-white">
+              Academics
+            </h2>
+            <p className="text-center text-gray-600 dark:text-gray-300 mb-12">
+              Academic and research contributions led by Dr. Vinay Kumar
+              Venkataramana, Founder &amp; Managing Director
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {[
+                {
+                  title: "Board of Studies Advisory",
+                  description:
+                    "Member of BoS at various universities, and Industrial Consultant to the BoS of NIE, Mysuru.",
+                },
+                {
+                  title: "Curriculum & Syllabus Design",
+                  description: "For universities and colleges.",
+                },
+                {
+                  title: "Resource Person",
+                  description:
+                    "For FDPs (including at IIT Guwahati), ideathons and hackathons, including judging.",
+                },
+                {
+                  title: "Conference Leadership",
+                  description:
+                    "Program Chair and Regional Chair (India) for ICPRS; Scientific Committee member for ICPRS-27.",
+                },
+                {
+                  title: "Peer Review",
+                  description:
+                    "For Pattern Recognition Letters, SN Computer Science and international conferences.",
+                },
+                {
+                  title: "Research",
+                  description:
+                    "Computer vision and facial expression recognition, such as the IAH-LBP descriptor.",
+                },
+                {
+                  title: "Industry-College Project Collaboration",
+                  description: "For example, SwagatAI.",
+                },
+              ].map((item, idx) => (
+                <div
+                  key={idx}
+                  className="bg-white dark:bg-gray-700 p-6 rounded-xl border border-gray-200 dark:border-gray-600"
+                >
+                  <h3 className="text-lg font-bold mb-2 text-gray-900 dark:text-white">
+                    {item.title}
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-300">
+                    {item.description}
+                  </p>
+                </div>
+              ))}
             </div>
           </div>
         </div>

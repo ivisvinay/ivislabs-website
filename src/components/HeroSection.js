@@ -25,11 +25,11 @@ const HeroSection = () => {
     },
     {
       title: "Empowering Talent Transformations",
-      subtitle: "EdTech | Academy | Training",
+      subtitle: "PulseAI | Pulse Academy | Training",
       description: "Bridging the skill gap with industry-focused AI education",
       bgClass: "from-teal-900 via-cyan-800 to-teal-900",
-      cta: "Join Academy",
-      link: "/academy"
+      cta: "Join Pulse Academy",
+      link: "https://academy.pulseai.school"
     }
   ];
 
@@ -148,13 +148,23 @@ const HeroSection = () => {
               transition={{ delay: 0.8 }}
               className="flex flex-wrap gap-4"
             >
-              <Link 
-                to={slides[currentSlide].link}
-                className="group px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-900 text-white rounded-lg font-semibold hover:shadow-2xl transform hover:scale-105 transition-all inline-flex items-center"
-              >
-                {slides[currentSlide].cta}
-                <FiArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
-              </Link>
+              {slides[currentSlide].link.startsWith("http") ? (
+                <a
+                  href={slides[currentSlide].link}
+                  className="group px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-900 text-white rounded-lg font-semibold hover:shadow-2xl transform hover:scale-105 transition-all inline-flex items-center"
+                >
+                  {slides[currentSlide].cta}
+                  <FiArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
+                </a>
+              ) : (
+                <Link
+                  to={slides[currentSlide].link}
+                  className="group px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-900 text-white rounded-lg font-semibold hover:shadow-2xl transform hover:scale-105 transition-all inline-flex items-center"
+                >
+                  {slides[currentSlide].cta}
+                  <FiArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
+                </Link>
+              )}
               {/* <button className="px-8 py-4 bg-white/10 backdrop-blur-md text-white rounded-lg font-semibold hover:bg-white/20 transition-all inline-flex items-center border border-white/30">
                 <FiPlay className="mr-2" />
                 Watch Demo

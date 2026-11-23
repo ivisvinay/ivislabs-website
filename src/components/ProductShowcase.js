@@ -1,56 +1,47 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FiMonitor, FiSearch, FiUsers, FiMessageSquare, FiShoppingBag, FiArrowRight } from 'react-icons/fi';
+import { FiBookOpen, FiUsers, FiShield, FiCpu, FiArrowRight } from 'react-icons/fi';
 
 const ProductShowcase = () => {
   const [activeProduct, setActiveProduct] = useState(0);
 
   const products = [
     {
-      id: 'visual-search',
-      name: 'Visual Search Engine',
-      icon: <FiSearch className="text-3xl" />,
-      description: 'AI-powered image search for e-commerce product discovery and replacement parts matching',
-      features: ['Deep learning algorithms', 'Real-time matching', 'Multi-category support'],
-      demoLink: 'https://recommender.ivislabs.in/',
-      image: 'recommender.ivislabs.in'
-    },
-    {
-      id: 'machine-monitor',
-      name: 'Machine Shop Monitor',
-      icon: <FiMonitor className="text-3xl" />,
-      description: 'Real-time industrial machine monitoring with predictive maintenance alerts',
-      features: ['IoT sensor integration', 'Power consumption analytics', 'Predictive maintenance'],
-      demoLink: 'https://machineshop.ivislabs.in/',
-      image: 'machineshop.ivislabs.in'
+      id: 'pulseai-k12',
+      name: 'PulseAI K-12',
+      icon: <FiBookOpen className="text-3xl" />,
+      description: 'AI curriculum for schools, aligned to NCERT (Grades 1-9). Paying customers today.',
+      features: ['NCERT-aligned curriculum', 'Grades 1-9', 'Delivered to partner schools'],
+      demoLink: 'https://pulseai.school',
+      image: 'pulseai.school'
     },
     {
       id: 'entry-exit',
-      name: 'Entry-Exit System',
-      icon: <FiUsers className="text-3xl" />,
-      description: 'Smart access control and attendance monitoring with facial recognition',
-      features: ['Automated registration', 'Real-time analytics', 'Visitor tracking'],
+      name: 'Entry-Exit',
+      icon: <FiShield className="text-3xl" />,
+      description: 'Face-recognition access control and surveillance. Paying customers today.',
+      features: ['Facial recognition check-in/out', 'Real-time visitor tracking', 'Security alerts'],
       demoLink: 'https://entry-exit.ivislabs.in/',
       image: 'entry-exit.ivislabs.in'
     },
     {
-      id: 'sereno',
-      name: 'Sereno Platform',
-      icon: <FiMessageSquare className="text-3xl" />,
-      description: 'Enterprise communication and collaboration platform for teams',
-      features: ['Team chat', 'Ticket management', 'Polls & announcements'],
-      demoLink: 'https://sereno.ivislabs.in/',
-      image: 'Enterprise platform'
+      id: 'netted',
+      name: 'Netted',
+      icon: <FiUsers className="text-3xl" />,
+      description: 'Hiring credibility platform - "CIBIL for hiring." Currently an MVP.',
+      features: ['Credibility scoring for hiring decisions'],
+      demoLink: '/products#netted',
+      image: 'Hiring credibility platform'
     },
     {
-      id: 'pharmacy',
-      name: 'AR Pharmacy Search',
-      icon: <FiShoppingBag className="text-3xl" />,
-      description: 'Augmented reality based retail search solution for pharmacies',
-      features: ['AR visualization', 'Product location', 'Inventory tracking'],
-      demoLink: 'https://pharmacy.ivislabs.in/',
-      image: 'pharmacy.ivislabs.in'
+      id: 'oota',
+      name: 'OOTA',
+      icon: <FiCpu className="text-3xl" />,
+      description: 'Safety-critical home cooking robotics platform, supervised remotely from a phone. Patent filed.',
+      features: ['Remote supervision from a phone', 'Safety-critical robotics design'],
+      demoLink: '/products#oota',
+      image: 'Home cooking robotics'
     }
   ];
 
@@ -106,13 +97,23 @@ const ProductShowcase = () => {
                 </motion.div>
               ))}
             </div>
-            <Link
-              to={products[activeProduct].demoLink}
-              className="inline-flex items-center px-6 py-3 bg-white text-orange-600 rounded-lg font-semibold hover:shadow-xl transform hover:scale-105 transition-all"
-            >
-              <span>Know More</span>
-              <FiArrowRight className="ml-2" />
-            </Link>
+            {products[activeProduct].demoLink.startsWith('http') ? (
+              <a
+                href={products[activeProduct].demoLink}
+                className="inline-flex items-center px-6 py-3 bg-white text-orange-600 rounded-lg font-semibold hover:shadow-xl transform hover:scale-105 transition-all"
+              >
+                <span>Know More</span>
+                <FiArrowRight className="ml-2" />
+              </a>
+            ) : (
+              <Link
+                to={products[activeProduct].demoLink}
+                className="inline-flex items-center px-6 py-3 bg-white text-orange-600 rounded-lg font-semibold hover:shadow-xl transform hover:scale-105 transition-all"
+              >
+                <span>Know More</span>
+                <FiArrowRight className="ml-2" />
+              </Link>
+            )}
           </div>
           <div className="relative">
             <motion.div

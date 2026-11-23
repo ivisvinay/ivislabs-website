@@ -11,14 +11,13 @@ import Footer from "./components/Footer";
 import ChatWidget from "./components/ChatWidget";
 import ScrollToTop from "./components/ScrollToTop";
 import Loader from "./components/Loader";
+import ExternalRedirect from "./components/ExternalRedirect";
 
 // Pages
 import Home from "./pages/Home";
 import Contact from "./pages/Contact";
 import Services from "./pages/Services";
 import Products from "./pages/Products";
-import Pulse from "./pages/Pulse";
-import Academy from "./pages/Academy";
 import About from "./pages/About";
 import Blog from "./pages/Blog";
 import CaseStudies from "./pages/CaseStudies";
@@ -56,8 +55,14 @@ const AppShell = () => {
           <Route path="/about" element={<About />} />
           <Route path="/services" element={<Services />} />
           <Route path="/products" element={<Products />} />
-          <Route path="/academy" element={<Academy />} />
-          <Route path="/edtech" element={<Pulse />} />
+          <Route
+            path="/academy"
+            element={<ExternalRedirect to="https://academy.pulseai.school" />}
+          />
+          <Route
+            path="/edtech"
+            element={<ExternalRedirect to="https://pulseai.school" />}
+          />
           <Route path="/blog" element={<Blog />} />
           {/* {/<Route path="/blog/:id" element={<BlogPost />} />/} */}
           <Route path="/case-studies" element={<CaseStudies />} />

@@ -21,32 +21,32 @@ const Home = () => {
 
   const services = [
     {
-      icon: <FiEye className="text-3xl" />,
-      title: "Computer Vision",
-      description: "Advanced AI-powered image recognition and analysis for enterprise solutions",
-      color: "from-blue-500 to-cyan-500",
-      link: "/services#ai-vision"
+      icon: <FiMonitor className="text-3xl" />,
+      title: "Manufacturing Intelligence",
+      description: "CNC/MTConnect integration with OEE analytics for shop floors",
+      color: "from-purple-500 to-pink-500",
+      link: "/services#manufacturing-intelligence"
     },
     {
-      icon: <FiMonitor className="text-3xl" />,
-      title: "Smart Monitoring",
-      description: "Real-time industrial IoT monitoring with predictive analytics",
-      color: "from-purple-500 to-pink-500",
-      link: "/services#monitoring"
+      icon: <FiEye className="text-3xl" />,
+      title: "Retail Visual AI",
+      description: "Computer-vision analytics for stores",
+      color: "from-blue-500 to-cyan-500",
+      link: "/services#retail-visual-ai"
     },
     {
       icon: <FiBox className="text-3xl" />,
-      title: "AR/VR Solutions",
-      description: "Immersive virtual try-on and augmented reality experiences",
+      title: "Computer Vision Services",
+      description: "Including virtual try-ons, for clients such as KIKSARVR",
       color: "from-orange-500 to-red-500",
-      link: "/services#ar-vr"
+      link: "/services#computer-vision-services"
     },
     {
       icon: <FiCpu className="text-3xl" />,
-      title: "AI Integration",
-      description: "Seamless AI implementation for digital transformation",
+      title: "AI & CV Consulting",
+      description: "Problem scoping, proof-of-concept builds and deployment advice",
       color: "from-green-500 to-teal-500",
-      link: "/services#integration"
+      link: "/services#ai-cv-consulting"
     }
   ];
 
@@ -102,20 +102,20 @@ const Home = () => {
               >
                 <div className="grid grid-cols-2 gap-6">
                   <div className="text-center">
-                    <div className="text-4xl font-bold text-gray-900">50+</div>
-                    <div className="text-sm text-blue-200">AI Projects</div>
+                    <div className="text-4xl font-bold text-gray-900">2021</div>
+                    <div className="text-sm text-blue-200">Founded</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-4xl font-bold text-gray-900">100+</div>
-                    <div className="text-sm text-blue-200">Happy Clients</div>
+                    <div className="text-4xl font-bold text-gray-900">8+</div>
+                    <div className="text-sm text-blue-200">Products Built</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-4xl font-bold text-gray-900">15+</div>
-                    <div className="text-sm text-blue-200">Industries</div>
+                    <div className="text-4xl font-bold text-gray-900">4</div>
+                    <div className="text-sm text-blue-200">Product Domains</div>
                   </div>
                   <div className="text-center">
                     <div className="text-4xl font-bold text-gray-900">24/7</div>
-                    <div className="text-sm text-blue-200">Support</div>
+                    <div className="text-sm text-blue-200">Monitoring</div>
                   </div>
                 </div>
               </motion.div>
@@ -183,48 +183,49 @@ const Home = () => {
         </motion.div>
       </section>
 
-      {/* EdTech & Academy Section - Teal Theme */}
+      {/* PulseAI & Pulse Academy Section - Teal Theme */}
       <section className="section-padding bg-gradient-to-br from-teal-600 via-cyan-600 to-blue-600 text-white relative">
         <div className="text-center mb-12">
-          <h2 className="text-4xl center lg:text-5xl font-bold mb-4">EdTech & Academy Horizontals</h2>
+          <h2 className="text-4xl center lg:text-5xl font-bold mb-4">PulseAI &amp; Pulse Academy</h2>
         </div>
-        <motion.div 
+        <motion.div
           ref={ref4}
           initial={{ opacity: 0 }}
           animate={inView4 ? { opacity: 1 } : {}}
           className="container-custom relative z-10"
         >
           <div className="grid lg:grid-cols-2 gap-12">
-            <motion.div 
+            <motion.div
               initial={{ x: -50, opacity: 0 }}
               animate={inView4 ? { x: 0, opacity: 1 } : {}}
               transition={{ duration: 0.8 }}
               className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20"
             >
-              <h3 className="text-3xl font-bold mb-4">PULSE EdTech Solutions</h3>
+              <h3 className="text-3xl font-bold mb-4">PulseAI</h3>
               <p className="text-lg text-cyan-100 mb-6">
-                Comprehensive educational technology solutions for K-12 schools and engineering colleges
+                K-12 and engineering education products, from NCERT-aligned AI
+                curricula to interactive engineering labs
               </p>
               <ul className="space-y-3 mb-6">
                 <li className="flex items-center">
                   <FiTarget className="mr-3 text-cyan-300" />
-                  <span>AI curriculum for schools</span>
+                  <span>PulseAI K-12: NCERT-aligned AI curriculum (Grades 1-9)</span>
                 </li>
                 <li className="flex items-center">
                   <FiUsers className="mr-3 text-cyan-300" />
-                  <span>Technical learning platform</span>
+                  <span>FUNgineering: interactive engineering labs for colleges</span>
                 </li>
                 <li className="flex items-center">
                   <FiTrendingUp className="mr-3 text-cyan-300" />
-                  <span>School-Parent communication</span>
+                  <span>Edu-Square OS: AI-powered school operating system</span>
                 </li>
               </ul>
-              <Link to="/edtech" className="btn-secondary bg-white text-teal-700 hover:bg-gray-100">
-                Explore EdTech <FiArrowRight className="inline ml-2" />
-              </Link>
+              <a href="https://pulseai.school" className="btn-secondary bg-white text-teal-700 hover:bg-gray-100">
+                Explore PulseAI <FiArrowRight className="inline ml-2" />
+              </a>
             </motion.div>
 
-            <motion.div 
+            <motion.div
               initial={{ x: 50, opacity: 0 }}
               animate={inView4 ? { x: 0, opacity: 1 } : {}}
               transition={{ duration: 0.8 }}
@@ -232,25 +233,25 @@ const Home = () => {
             >
               <h3 className="text-3xl font-bold mb-4">Pulse Academy</h3>
               <p className="text-lg text-cyan-100 mb-6">
-                Industry-focused training programs bridging the skill gap between academia and industry
+                Skill-building programs for students, faculty, schools and companies
               </p>
               <ul className="space-y-3 mb-6">
                 <li className="flex items-center">
                   <FiAward className="mr-3 text-cyan-300" />
-                  <span>Industry skill gap training</span>
+                  <span>Technical training & FDPs for colleges</span>
                 </li>
                 <li className="flex items-center">
                   <FiCpu className="mr-3 text-cyan-300" />
-                  <span>AI/Robotics for K-12</span>
+                  <span>Corporate training (Deloitte, Sigmoid)</span>
                 </li>
                 <li className="flex items-center">
                   <FiUsers className="mr-3 text-cyan-300" />
-                  <span>Corporate training programs</span>
+                  <span>B2C courses & the Integrated Tech Mastery Program</span>
                 </li>
               </ul>
-              <Link to="/academy" className="btn-secondary bg-white text-teal-700 hover:bg-gray-100">
+              <a href="https://academy.pulseai.school" className="btn-secondary bg-white text-teal-700 hover:bg-gray-100">
                 Join Academy <FiArrowRight className="inline ml-2" />
-              </Link>
+              </a>
             </motion.div>
           </div>
         </motion.div>
@@ -263,8 +264,8 @@ const Home = () => {
       <section className="section-padding bg-gray-50">
         <div className="container-custom">
           <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold text-teal-900 mb-4">Trusted by Industry Leaders</h2>
-            <p className="text-xl text-teal-900">From startups to Fortune 500 companies</p>
+            <h2 className="text-4xl font-bold text-teal-900 mb-4">Trusted by Our Partners</h2>
+            <p className="text-xl text-teal-900">What our clients and collaborators say about working with us</p>
           </div>
           <ClientLogos />
           <div className="mt-16">

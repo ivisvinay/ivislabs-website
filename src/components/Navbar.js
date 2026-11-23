@@ -34,26 +34,14 @@ const Navbar = () => {
       // ]
     },
     {
-      name: "EdTech",
-      path: "/edtech",
-      // dropdown: [
-      //   { name: "CodeIdea", path: "/edtech#codeidea" },
-      //   { name: "PulseAI", path: "/edtech#pulseai" },
-      //   { name: "EduCareAI", path: "/edtech#educare" },
-      //   { name: "School ERP", path: "/edtech#school-erp" },
-      // ],
+      name: "PulseAI",
+      path: "https://pulseai.school",
+      external: true,
     },
     {
       name: "Academy",
-      // path: "/academy",
-      path: "https://pulse.ivislabs.com/",
+      path: "https://academy.pulseai.school",
       external: true,
-      // dropdown: [
-      //   { name: "Industry Training", path: "/academy#industry" },
-      //   { name: "AI/Robotics for K-12", path: "/academy#k12" },
-      //   { name: "Corporate Programs", path: "/academy#corporate" },
-      //   { name: "Certifications", path: "/academy#certifications" },
-      // ],
     },
     {
       name: "About",
@@ -105,19 +93,32 @@ const Navbar = () => {
                   onMouseEnter={() => setActiveDropdown(index)}
                   onMouseLeave={() => setActiveDropdown(null)}
                 >
-                  <Link
-                    to={item.path}
-                    className={`flex items-center space-x-1 font-medium transition-colors ${
-                      scrolled
-                        ? "text-gray-700 hover:text-blue-600"
-                        : "text-white hover:text-blue-200"
-                    } ${
-                      location.pathname === item.path ? "text-blue-600" : ""
-                    }`}
-                  >
-                    <span>{item.name}</span>
-                    {item.dropdown && <FiChevronDown className="text-sm" />}
-                  </Link>
+                  {item.external ? (
+                    <a
+                      href={item.path}
+                      className={`flex items-center space-x-1 font-medium transition-colors ${
+                        scrolled
+                          ? "text-gray-700 hover:text-blue-600"
+                          : "text-white hover:text-blue-200"
+                      }`}
+                    >
+                      <span>{item.name}</span>
+                    </a>
+                  ) : (
+                    <Link
+                      to={item.path}
+                      className={`flex items-center space-x-1 font-medium transition-colors ${
+                        scrolled
+                          ? "text-gray-700 hover:text-blue-600"
+                          : "text-white hover:text-blue-200"
+                      } ${
+                        location.pathname === item.path ? "text-blue-600" : ""
+                      }`}
+                    >
+                      <span>{item.name}</span>
+                      {item.dropdown && <FiChevronDown className="text-sm" />}
+                    </Link>
+                  )}
 
                   {/* Dropdown Menu */}
                   <AnimatePresence>
@@ -211,13 +212,23 @@ const Navbar = () => {
             <div className="p-6 pt-20">
               {navItems.map((item, index) => (
                 <div key={index} className="mb-4">
-                  <Link
-                    to={item.path}
-                    className="block text-lg font-semibold text-gray-800 mb-2"
-                    onClick={() => setIsOpen(false)}
-                  >
-                    {item.name}
-                  </Link>
+                  {item.external ? (
+                    <a
+                      href={item.path}
+                      className="block text-lg font-semibold text-gray-800 mb-2"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      {item.name}
+                    </a>
+                  ) : (
+                    <Link
+                      to={item.path}
+                      className="block text-lg font-semibold text-gray-800 mb-2"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      {item.name}
+                    </Link>
+                  )}
                   {item.dropdown && (
                     <div className="ml-4 space-y-2">
                       {item.dropdown.map((subItem, subIndex) => (

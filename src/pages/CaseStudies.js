@@ -127,15 +127,17 @@ const CaseStudies = () => {
                     </div>
 
                     {/* Testimonial */}
-                    <div className="bg-gradient-to-br from-primary-50 to-secondary-50 p-8 rounded-2xl">
-                      <Quote className="h-10 w-10 text-primary-600 mb-4" />
-                      <p className="text-lg text-gray-700 italic mb-4">
-                        "{study.testimonial}"
-                      </p>
-                      <p className="text-primary-600 font-semibold">
-                        - {study.client}
-                      </p>
-                    </div>
+                    {study.testimonial && (
+                      <div className="bg-gradient-to-br from-primary-50 to-secondary-50 p-8 rounded-2xl">
+                        <Quote className="h-10 w-10 text-primary-600 mb-4" />
+                        <p className="text-lg text-gray-700 italic mb-4">
+                          "{study.testimonial}"
+                        </p>
+                        <p className="text-primary-600 font-semibold">
+                          - {study.client}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

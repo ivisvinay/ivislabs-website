@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
-import { FiUsers, FiAward, FiCode, FiTrendingUp } from 'react-icons/fi';
+import { FiCalendar, FiBox, FiBriefcase, FiMonitor } from 'react-icons/fi';
 
 const StatsCounter = () => {
   const [ref, inView] = useInView({ threshold: 0.3, triggerOnce: true });
@@ -15,31 +15,31 @@ const StatsCounter = () => {
 
   const stats = [
     {
-      icon: <FiUsers className="text-4xl" />,
-      value: 100,
-      suffix: '+',
-      label: 'Happy Clients',
+      icon: <FiCalendar className="text-4xl" />,
+      value: 2021,
+      suffix: '',
+      label: 'Founded in Mysuru',
       color: 'from-blue-500 to-cyan-500'
     },
     {
-      icon: <FiCode className="text-4xl" />,
-      value: 50,
+      icon: <FiBox className="text-4xl" />,
+      value: 8,
       suffix: '+',
-      label: 'AI Projects Delivered',
+      label: 'Products & Platforms Built',
       color: 'from-purple-500 to-pink-500'
     },
     {
-      icon: <FiAward className="text-4xl" />,
-      value: 15,
-      suffix: '+',
-      label: 'Industries Served',
+      icon: <FiBriefcase className="text-4xl" />,
+      value: 6,
+      suffix: '',
+      label: 'Core Service Lines',
       color: 'from-orange-500 to-red-500'
     },
     {
-      icon: <FiTrendingUp className="text-4xl" />,
-      value: 95,
-      suffix: '%',
-      label: 'Client Satisfaction',
+      icon: <FiMonitor className="text-4xl" />,
+      value: 24,
+      suffix: '/7',
+      label: 'Real-time Monitoring',
       color: 'from-green-500 to-teal-500'
     }
   ];
@@ -88,9 +88,9 @@ const StatsCounter = () => {
           transition={{ duration: 0.6 }}
           className="text-center mb-12"
         >
-          <h2 className="text-4xl font-bold text-gray-100 mb-4">Our Impact in Numbers</h2>
+          <h2 className="text-4xl font-bold text-gray-100 mb-4">IVIS LABS at a Glance</h2>
           <p className="text-xl text-gray-100 max-w-3xl mx-auto">
-            Delivering excellence in AI and Computer Vision solutions since our inception
+            An AI and computer vision company based in Mysuru, founded in 2021
           </p>
         </motion.div>
 
