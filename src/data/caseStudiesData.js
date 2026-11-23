@@ -4,6 +4,7 @@ export const caseStudies = [
     title: "Virtual Try-On & Computer Vision for KIKSARVR",
     client: "KIKSARVR",
     industry: "Computer Vision Services",
+    category: "Computer Vision",
     challenge:
       "KIKSARVR needed computer vision expertise to build virtual try-on experiences for its customers.",
     solution:
@@ -21,6 +22,7 @@ export const caseStudies = [
     title: "Bilingual Lab Explainer for Mangalore University's BCA Programme",
     client: "Mangalore University",
     industry: "University Learning Platforms",
+    category: "EdTech",
     challenge:
       "Mangalore University's BCA programme needed a lab explainer accessible to students in two languages.",
     solution:
@@ -38,6 +40,7 @@ export const caseStudies = [
     title: "Sparshajyoti R1-A: Optical Fingerprint Scanner",
     client: "Hardware Prototype & Design Transfer",
     industry: "Hardware Engineering",
+    category: "Operations",
     challenge:
       "A client needed an optical fingerprint scanner taken from concept to a manufacturable design.",
     solution:
@@ -55,6 +58,7 @@ export const caseStudies = [
     title: "SwagatAI: Industry-College Project Collaboration",
     client: "SwagatAI",
     industry: "Academics",
+    category: "EdTech",
     challenge:
       "Translating academic research into an industry-facing collaborative project.",
     solution:

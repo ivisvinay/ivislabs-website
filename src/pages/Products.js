@@ -1,7 +1,27 @@
+import { useState } from 'react';
 import { ExternalLink, CheckCircle } from 'lucide-react';
 import { companyData } from '../data/companyData';
+import CategoryFilter from '../components/CategoryFilter';
+
+// Category labels ordered by proven traction (paying-customer lines first)
+const CATEGORY_MAP = {
+  Education: 'EdTech',
+  'Security & Operations': 'Operations',
+  'HR & Hiring': 'HR',
+  'Home Robotics': 'Robotics',
+};
+const CATEGORIES = ['All', 'EdTech', 'Operations', 'HR', 'Robotics'];
 
 const Products = () => {
+  const [activeCategory, setActiveCategory] = useState('All');
+
+  const filteredProducts =
+    activeCategory === 'All'
+      ? companyData.products
+      : companyData.products.filter(
+          (product) => CATEGORY_MAP[product.category] === activeCategory
+        );
+
   return (
     <div>
       {/* Hero Section */}
@@ -26,8 +46,14 @@ const Products = () => {
       {/* Products */}
       <section className="section-padding bg-white">
         <div className="container-custom">
-          <div className="space-y-16">
-            {companyData.products.map((product, index) => (
+          <div className="flex flex-col lg:flex-row gap-12">
+            <CategoryFilter
+              categories={CATEGORIES}
+              active={activeCategory}
+              onChange={setActiveCategory}
+            />
+            <div className="flex-1 space-y-16">
+            {filteredProducts.map((product, index) => (
               <div 
                 key={product.id}
                 id={product.name.toLowerCase().replace(/\s+/g, '-')}
@@ -43,7 +69,7 @@ const Products = () => {
                     </div>
                     {product.category && (
                       <span className="mb-2 px-3 py-1 bg-white/10 backdrop-blur-sm rounded-full text-xs font-semibold uppercase tracking-wide text-white/80">
-                        {product.category}
+                        {CATEGORY_MAP[product.category] || product.category}
                       </span>
                     )}
                     <h3 className="text-3xl font-bold mb-2">{product.name}</h3>
@@ -134,6 +160,7 @@ const Products = () => {
                 </div>
               </div>
             ))}
+            </div>
           </div>
         </div>
       </section>

@@ -19,29 +19,28 @@ const Navbar = () => {
 
   const navItems = [
     {
+      name: "Solutions",
+      path: "/services#solutions",
+    },
+    {
       name: "Services",
-      path: "/services",
+      path: "/services#services",
     },
     {
       name: "Products",
       path: "/products",
-      // dropdown: [
-      //   { name: 'Visual Search Engine', path: '/demo/visual-search' },
-      //   { name: 'Machine Shop Monitor', path: '/demo/machine-monitor' },
-      //   { name: 'Entry-Exit System', path: '/demo/entry-exit' },
-      //   { name: 'Sereno Platform', path: '/demo/sereno' },
-      //   { name: 'AR Pharmacy Search', path: '/demo/pharmacy' },
-      // ]
     },
     {
-      name: "PulseAI",
-      path: "https://pulseai.school",
-      external: true,
-    },
-    {
-      name: "Academy",
-      path: "https://academy.pulseai.school",
-      external: true,
+      name: "PulseAI & Academy",
+      path: "#",
+      dropdown: [
+        { name: "PulseAI", path: "https://pulseai.school", external: true },
+        {
+          name: "Academy",
+          path: "https://academy.pulseai.school",
+          external: true,
+        },
+      ],
     },
     {
       name: "About",
@@ -129,15 +128,25 @@ const Navbar = () => {
                         exit={{ opacity: 0, y: 10 }}
                         className="absolute top-full left-0 mt-2 w-56 bg-white rounded-lg shadow-xl py-2 border border-gray-100"
                       >
-                        {item.dropdown.map((subItem, subIndex) => (
-                          <Link
-                            key={subIndex}
-                            to={subItem.path}
-                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                          >
-                            {subItem.name}
-                          </Link>
-                        ))}
+                        {item.dropdown.map((subItem, subIndex) =>
+                          subItem.external ? (
+                            <a
+                              key={subIndex}
+                              href={subItem.path}
+                              className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                            >
+                              {subItem.name}
+                            </a>
+                          ) : (
+                            <Link
+                              key={subIndex}
+                              to={subItem.path}
+                              className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                            >
+                              {subItem.name}
+                            </Link>
+                          )
+                        )}
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -231,16 +240,27 @@ const Navbar = () => {
                   )}
                   {item.dropdown && (
                     <div className="ml-4 space-y-2">
-                      {item.dropdown.map((subItem, subIndex) => (
-                        <Link
-                          key={subIndex}
-                          to={subItem.path}
-                          className="block text-sm text-gray-600 hover:text-blue-600"
-                          onClick={() => setIsOpen(false)}
-                        >
-                          {subItem.name}
-                        </Link>
-                      ))}
+                      {item.dropdown.map((subItem, subIndex) =>
+                        subItem.external ? (
+                          <a
+                            key={subIndex}
+                            href={subItem.path}
+                            className="block text-sm text-gray-600 hover:text-blue-600"
+                            onClick={() => setIsOpen(false)}
+                          >
+                            {subItem.name}
+                          </a>
+                        ) : (
+                          <Link
+                            key={subIndex}
+                            to={subItem.path}
+                            className="block text-sm text-gray-600 hover:text-blue-600"
+                            onClick={() => setIsOpen(false)}
+                          >
+                            {subItem.name}
+                          </Link>
+                        )
+                      )}
                     </div>
                   )}
                 </div>

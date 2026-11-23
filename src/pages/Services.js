@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { useInView } from "react-intersection-observer";
 import { Link } from "react-router-dom";
+import CategoryFilter from "../components/CategoryFilter";
 import {
   FiEye,
   FiSearch,
@@ -19,7 +20,11 @@ import {
   FiBriefcase,
 } from "react-icons/fi";
 
+// Solution categories ordered by proven traction (real deployments/case studies first)
+const SOLUTION_CATEGORIES = ["All", "EdTech", "Manufacturing", "Retail", "Business"];
+
 const Services = () => {
+  const [activeSolutionCategory, setActiveSolutionCategory] = useState("All");
   const [ref1, inView1] = useInView({ threshold: 0.1, triggerOnce: true });
   const [ref2, inView2] = useInView({ threshold: 0.1, triggerOnce: true });
   const [ref3, inView3] = useInView({ threshold: 0.1, triggerOnce: true });
@@ -29,6 +34,7 @@ const Services = () => {
   const solutions = [
     {
       id: "manufacturing-intelligence",
+      category: "Manufacturing",
       icon: <FiMonitor className="text-4xl" />,
       title: "Manufacturing Intelligence",
       description:
@@ -42,6 +48,7 @@ const Services = () => {
     },
     {
       id: "retail-visual-ai",
+      category: "Retail",
       icon: <FiEye className="text-4xl" />,
       title: "Retail Visual AI",
       description: "Computer-vision analytics for stores.",
@@ -53,6 +60,7 @@ const Services = () => {
     },
     {
       id: "business-crm",
+      category: "Business",
       icon: <FiLayers className="text-4xl" />,
       title: "Business CRM",
       description:
@@ -66,6 +74,7 @@ const Services = () => {
     },
     {
       id: "academy-management-platform",
+      category: "EdTech",
       icon: <FiAward className="text-4xl" />,
       title: "Academy Management Platform",
       description: "A multi-tenant system for running multi-centre academies.",
@@ -77,6 +86,7 @@ const Services = () => {
     },
     {
       id: "university-learning-platforms",
+      category: "EdTech",
       icon: <FiBookOpen className="text-4xl" />,
       title: "University Learning Platforms",
       description:
@@ -237,7 +247,7 @@ const Services = () => {
       </section>
 
       {/* Solutions Grid */}
-      <section className="section-padding bg-gray-50">
+      <section id="solutions" className="section-padding bg-gray-50">
         <div className="container-custom">
           <div className="text-center mb-12">
             <h2 className="text-4xl font-bold mb-4">Solutions</h2>
@@ -245,13 +255,25 @@ const Services = () => {
               AI and software systems built around a client's specific problem
             </p>
           </div>
-          <motion.div
-            ref={ref1}
-            initial={{ opacity: 0 }}
-            animate={inView1 ? { opacity: 1 } : {}}
-            className="grid md:grid-cols-2 lg:grid-cols-3 gap-8"
-          >
-            {solutions.map((item, index) => (
+          <div className="flex flex-col lg:flex-row gap-12">
+            <CategoryFilter
+              categories={SOLUTION_CATEGORIES}
+              active={activeSolutionCategory}
+              onChange={setActiveSolutionCategory}
+            />
+            <motion.div
+              ref={ref1}
+              initial={{ opacity: 0 }}
+              animate={inView1 ? { opacity: 1 } : {}}
+              className="flex-1 grid md:grid-cols-2 gap-8"
+            >
+              {solutions
+                .filter(
+                  (item) =>
+                    activeSolutionCategory === "All" ||
+                    item.category === activeSolutionCategory
+                )
+                .map((item, index) => (
               <motion.div
                 key={item.id}
                 id={item.id}
@@ -278,13 +300,14 @@ const Services = () => {
                   </ul>
                 </div>
               </motion.div>
-            ))}
-          </motion.div>
+                ))}
+            </motion.div>
+          </div>
         </div>
       </section>
 
       {/* Services Grid */}
-      <section className="section-padding bg-white">
+      <section id="services" className="section-padding bg-white">
         <div className="container-custom">
           <div className="text-center mb-12">
             <h2 className="text-4xl font-bold mb-4">Services</h2>

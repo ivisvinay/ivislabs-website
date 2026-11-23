@@ -1,7 +1,19 @@
+import { useState } from "react";
 import { TrendingUp, Users, CheckCircle, Quote } from "lucide-react";
 import { caseStudies } from "../data/caseStudiesData";
+import CategoryFilter from "../components/CategoryFilter";
+
+// Ordered by proven traction (EdTech & Operations have the most delivered work)
+const CATEGORIES = ["All", "EdTech", "Operations", "Computer Vision"];
 
 const CaseStudies = () => {
+  const [activeCategory, setActiveCategory] = useState("All");
+
+  const filteredCaseStudies =
+    activeCategory === "All"
+      ? caseStudies
+      : caseStudies.filter((study) => study.category === activeCategory);
+
   return (
     <div>
       {/* Hero */}
@@ -26,8 +38,14 @@ const CaseStudies = () => {
       {/* Case Studies */}
       <section className="section-padding bg-gray-50">
         <div className="container-custom">
-          <div className="space-y-16">
-            {caseStudies.map((study, index) => (
+          <div className="flex flex-col lg:flex-row gap-12">
+            <CategoryFilter
+              categories={CATEGORIES}
+              active={activeCategory}
+              onChange={setActiveCategory}
+            />
+            <div className="flex-1 space-y-16">
+            {filteredCaseStudies.map((study, index) => (
               <div
                 key={study.id}
                 className="bg-white rounded-3xl overflow-hidden shadow-xl"
@@ -142,6 +160,7 @@ const CaseStudies = () => {
                 </div>
               </div>
             ))}
+            </div>
           </div>
         </div>
       </section>
